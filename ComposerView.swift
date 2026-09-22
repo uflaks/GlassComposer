@@ -128,6 +128,11 @@ public struct ComposerView<MenuExtras: View>: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
+        // Hosts mount the composer over their scrolling content (`safeAreaInset`
+        // in Malory), so make the whole padded bounds hit-testable. Otherwise
+        // touches in the padding and the gaps between controls fall through to
+        // the rows scrolled beneath the glass.
+        .contentShape(Rectangle())
         .background {
             if isPlusMenuExpanded {
                 Color.black.opacity(0.18)
