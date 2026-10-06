@@ -6,13 +6,20 @@
 import PhotosUI
 import SwiftUI
 
+/// Sizes shared by the composer's round controls so a caller-supplied
+/// accessory lines up with the `+`, send and stop buttons.
+enum ComposerMetrics {
+    static let controlHeight: CGFloat = 44
+}
+
 /// The Liquid Glass chat composer shared by Malory and AgentDeck: a growing
 /// text field with dictation, an optional web-search toggle, an optional
-/// `+` menu (Photos plus caller-supplied `ComposerPlusMenuButton` rows), and a
-/// send button that turns into a stop button while a turn is running when the
-/// caller provides `onStop`.
+/// `+` menu (Photos plus caller-supplied `ComposerPlusMenuButton` rows), an
+/// optional accessory control between the field and the send button
+/// (typically a `ComposerAccessoryMenu`), and a send button that turns into a
+/// stop button while a turn is running when the caller provides `onStop`.
 @available(iOS 26.0, macOS 26.0, *)
-public struct ComposerView<MenuExtras: View>: View {
+public struct ComposerView<MenuExtras: View, Accessory: View>: View {
     @Binding var text: String
     @Binding var selectedPhoto: PhotosPickerItem?
     @FocusState.Binding var isFocused: Bool
@@ -28,11 +35,12 @@ public struct ComposerView<MenuExtras: View>: View {
     var onToggleSpeech: () -> Void
     var onToggleWebSearch: (() -> Void)?
     @ViewBuilder var menuExtras: () -> MenuExtras
+    @ViewBuilder var accessory: () -> Accessory
 
     @State private var isPlusMenuExpanded = false
     @State private var sendPulse = 0
 
-    private let controlHeight: CGFloat = 44
+    private let controlHeight = ComposerMetrics.controlHeight
     private let menuCornerRadius: CGFloat = 24
     private let menuAnimation = Animation.easeOut(duration: 0.16)
 
@@ -54,6 +62,9 @@ public struct ComposerView<MenuExtras: View>: View {
     ///   - onToggleSpeech: Start/stop dictation.
     ///   - onToggleWebSearch: Toggle web search; required for the globe to appear.
     ///   - menuExtras: Extra rows for the `+` menu, typically `ComposerPlusMenuButton`s.
+    ///   - accessory: A control shown between the text field and the send
+    ///     button, sized like the other round controls. Use
+    ///     `ComposerAccessoryMenu` for a menu of quick actions.
     public init(
         text: Binding<String>,
         selectedPhoto: Binding<PhotosPickerItem?>,
@@ -69,7 +80,8 @@ public struct ComposerView<MenuExtras: View>: View {
         onStop: (() -> Void)? = nil,
         onToggleSpeech: @escaping () -> Void,
         onToggleWebSearch: (() -> Void)? = nil,
-        @ViewBuilder menuExtras: @escaping () -> MenuExtras
+        @ViewBuilder menuExtras: @escaping () -> MenuExtras,
+        @ViewBuilder accessory: @escaping () -> Accessory
     ) {
         self._text = text
         self._selectedPhoto = selectedPhoto
@@ -86,6 +98,7 @@ public struct ComposerView<MenuExtras: View>: View {
         self.onToggleSpeech = onToggleSpeech
         self.onToggleWebSearch = onToggleWebSearch
         self.menuExtras = menuExtras
+        self.accessory = accessory
     }
 
     private var canSend: Bool {
@@ -98,6 +111,10 @@ public struct ComposerView<MenuExtras: View>: View {
 
     private var showsPlusControl: Bool {
         showsAttachments || MenuExtras.self != EmptyView.self
+    }
+
+    private var showsAccessory: Bool {
+        Accessory.self != EmptyView.self
     }
 
     public var body: some View {
@@ -117,6 +134,10 @@ public struct ComposerView<MenuExtras: View>: View {
                 GlassEffectContainer(spacing: 8) {
                     HStack(alignment: .bottom, spacing: 8) {
                         messageField
+                        if showsAccessory {
+                            accessory()
+                                .frame(width: controlHeight, height: controlHeight)
+                        }
                         if showsStopButton {
                             stopButton
                         } else {
@@ -247,14 +268,21 @@ public struct ComposerView<MenuExtras: View>: View {
         .onSubmit(send)
     }
 
+    // Send and stop are drawn like the `+` button (plain style inside a
+    // circular glass effect) instead of with `.buttonStyle(.glass)`, which is
+    // a capsule on iOS but a rounded square on macOS and would sit next to
+    // the round `+` and accessory controls with a different shape.
     private var sendButton: some View {
         Button(action: send) {
             Image(systemName: "arrow.up")
                 .font(.body.weight(.semibold))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(width: controlHeight, height: controlHeight)
+                .contentShape(Circle())
         }
-        .buttonStyle(.glass)
+        .buttonStyle(.plain)
+        .glassEffect(.regular, in: .circle)
         .frame(width: controlHeight, height: controlHeight)
+        .contentShape(Circle())
         .disabled(!canSend)
         .keyboardShortcut(.return, modifiers: .command)
         .accessibilityLabel("Send")
@@ -266,10 +294,13 @@ public struct ComposerView<MenuExtras: View>: View {
         } label: {
             Image(systemName: "stop.fill")
                 .font(.body.weight(.semibold))
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(width: controlHeight, height: controlHeight)
+                .contentShape(Circle())
         }
-        .buttonStyle(.glass)
+        .buttonStyle(.plain)
+        .glassEffect(.regular, in: .circle)
         .frame(width: controlHeight, height: controlHeight)
+        .contentShape(Circle())
         .accessibilityLabel("Stop")
     }
 
@@ -289,9 +320,94 @@ public struct ComposerView<MenuExtras: View>: View {
 }
 
 @available(iOS 26.0, macOS 26.0, *)
+extension ComposerView where Accessory == EmptyView {
+    /// A composer with extra `+` menu rows and nothing between the field and
+    /// the send button.
+    public init(
+        text: Binding<String>,
+        selectedPhoto: Binding<PhotosPickerItem?>,
+        isFocused: FocusState<Bool>.Binding,
+        isRecording: Bool,
+        isSending: Bool = false,
+        showsAttachments: Bool = true,
+        showsWebSearch: Bool = false,
+        webSearchEnabled: Bool = false,
+        placeholder: String = "Message",
+        errorMessage: String? = nil,
+        onSend: @escaping () -> Void,
+        onStop: (() -> Void)? = nil,
+        onToggleSpeech: @escaping () -> Void,
+        onToggleWebSearch: (() -> Void)? = nil,
+        @ViewBuilder menuExtras: @escaping () -> MenuExtras
+    ) {
+        self.init(
+            text: text,
+            selectedPhoto: selectedPhoto,
+            isFocused: isFocused,
+            isRecording: isRecording,
+            isSending: isSending,
+            showsAttachments: showsAttachments,
+            showsWebSearch: showsWebSearch,
+            webSearchEnabled: webSearchEnabled,
+            placeholder: placeholder,
+            errorMessage: errorMessage,
+            onSend: onSend,
+            onStop: onStop,
+            onToggleSpeech: onToggleSpeech,
+            onToggleWebSearch: onToggleWebSearch,
+            menuExtras: menuExtras,
+            accessory: { EmptyView() }
+        )
+    }
+}
+
+@available(iOS 26.0, macOS 26.0, *)
 extension ComposerView where MenuExtras == EmptyView {
-    /// A composer without extra `+` menu rows. The `+` button still appears
-    /// when `showsAttachments` is true.
+    /// A composer with an accessory control between the field and the send
+    /// button and no extra `+` menu rows. The `+` button still appears when
+    /// `showsAttachments` is true.
+    public init(
+        text: Binding<String>,
+        selectedPhoto: Binding<PhotosPickerItem?>,
+        isFocused: FocusState<Bool>.Binding,
+        isRecording: Bool,
+        isSending: Bool = false,
+        showsAttachments: Bool = true,
+        showsWebSearch: Bool = false,
+        webSearchEnabled: Bool = false,
+        placeholder: String = "Message",
+        errorMessage: String? = nil,
+        onSend: @escaping () -> Void,
+        onStop: (() -> Void)? = nil,
+        onToggleSpeech: @escaping () -> Void,
+        onToggleWebSearch: (() -> Void)? = nil,
+        @ViewBuilder accessory: @escaping () -> Accessory
+    ) {
+        self.init(
+            text: text,
+            selectedPhoto: selectedPhoto,
+            isFocused: isFocused,
+            isRecording: isRecording,
+            isSending: isSending,
+            showsAttachments: showsAttachments,
+            showsWebSearch: showsWebSearch,
+            webSearchEnabled: webSearchEnabled,
+            placeholder: placeholder,
+            errorMessage: errorMessage,
+            onSend: onSend,
+            onStop: onStop,
+            onToggleSpeech: onToggleSpeech,
+            onToggleWebSearch: onToggleWebSearch,
+            menuExtras: { EmptyView() },
+            accessory: accessory
+        )
+    }
+}
+
+@available(iOS 26.0, macOS 26.0, *)
+extension ComposerView where MenuExtras == EmptyView, Accessory == EmptyView {
+    /// A composer without extra `+` menu rows or an accessory. The `+` button
+    /// still appears when `showsAttachments` is true.
     public init(
         text: Binding<String>,
         selectedPhoto: Binding<PhotosPickerItem?>,
@@ -323,7 +439,8 @@ extension ComposerView where MenuExtras == EmptyView {
             onStop: onStop,
             onToggleSpeech: onToggleSpeech,
             onToggleWebSearch: onToggleWebSearch,
-            menuExtras: { EmptyView() }
+            menuExtras: { EmptyView() },
+            accessory: { EmptyView() }
         )
     }
 }
@@ -352,6 +469,12 @@ extension ComposerView where MenuExtras == EmptyView {
         menuExtras: {
             ComposerPlusMenuButton(systemImage: "gearshape", title: "Settings") {}
             ComposerPlusMenuButton(systemImage: "trash", title: "Clear", role: .destructive) {}
+        },
+        accessory: {
+            ComposerAccessoryMenu(systemImage: "bolt", accessibilityLabel: "Quick prompts") {
+                Button("Commit", systemImage: "checkmark.circle") {}
+                Button("Run tests", systemImage: "checkmark.seal") {}
+            }
         }
     )
     .frame(maxHeight: .infinity, alignment: .bottom)
