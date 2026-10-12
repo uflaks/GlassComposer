@@ -19,6 +19,10 @@ import Speech
 public final class SpeechInputController {
     public private(set) var isRecording = false
 
+    /// The language to transcribe. Read when dictation starts, so a host
+    /// with a language picker can change it between recordings.
+    public var locale: Locale
+
     /// Why the last start failed, or nil. Set it to nil to dismiss. Inspect
     /// the case to react (open Settings on `.microphoneDenied`, say).
     public var failure: SpeechInputFailure?
@@ -42,9 +46,12 @@ public final class SpeechInputController {
     private var restoredSessionConfiguration: AudioSessionConfiguration?
     #endif
 
-    /// - Parameter audioSessionPolicy: Whether this controller or the host
-    ///   configures `AVAudioSession` on iOS. Defaults to `.managed`.
-    public init(audioSessionPolicy: SpeechAudioSessionPolicy = .managed) {
+    /// - Parameters:
+    ///   - locale: The language to transcribe. Defaults to the device locale.
+    ///   - audioSessionPolicy: Whether this controller or the host configures
+    ///     `AVAudioSession` on iOS. Defaults to `.managed`.
+    public init(locale: Locale = .current, audioSessionPolicy: SpeechAudioSessionPolicy = .managed) {
+        self.locale = locale
         self.audioSessionPolicy = audioSessionPolicy
     }
 
@@ -111,7 +118,7 @@ public final class SpeechInputController {
     private func startAnalyzerSession(generation: Int) async throws {
         let module: any SpeechModule
 
-        if let speechLocale = await SpeechTranscriber.supportedLocale(equivalentTo: .current) {
+        if let speechLocale = await SpeechTranscriber.supportedLocale(equivalentTo: locale) {
             let transcriber = SpeechTranscriber(
                 locale: speechLocale,
                 transcriptionOptions: [],
@@ -126,7 +133,7 @@ public final class SpeechInputController {
             try checkStillCurrent(generation)
             listenForResults(transcriber.results, generation: generation)
             module = transcriber
-        } else if let dictationLocale = await DictationTranscriber.supportedLocale(equivalentTo: .current) {
+        } else if let dictationLocale = await DictationTranscriber.supportedLocale(equivalentTo: locale) {
             let transcriber = DictationTranscriber(
                 locale: dictationLocale,
                 preset: .progressiveShortDictation
@@ -364,7 +371,7 @@ public enum SpeechInputFailure: Error, LocalizedError, Equatable, Sendable {
     /// The user declined speech recognition.
     case speechDenied
     /// Neither `SpeechTranscriber` nor `DictationTranscriber` supports the
-    /// device locale.
+    /// requested locale.
     case localeNotSupported
     /// The on-device model for the locale is missing and could not be
     /// downloaded.

@@ -52,7 +52,8 @@ dictating and restores what it found afterwards. If your app plays audio
 too, pass a policy: `SpeechInputController(audioSessionPolicy: .managed(category: .playAndRecord))`
 keeps playback alive, and `.hostManaged` leaves the session entirely to you.
 Dictation stops on its own when a call or Siri interrupts audio, or when the
-input route changes.
+input route changes. It transcribes the device language unless you pass
+`SpeechInputController(locale:)` or set `locale` before the next recording.
 
 ## Usage
 
