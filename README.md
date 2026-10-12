@@ -23,7 +23,7 @@ send/stop button. Requires iOS 26 or macOS 26 (Liquid Glass and
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/uflaks/GlassComposer", from: "0.6.0")
+    .package(url: "https://github.com/uflaks/GlassComposer", from: "0.7.0")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -114,6 +114,15 @@ mock chat; a `SHOT` environment variable picks the state (`empty`, `typed`,
 `accessory`, `sending`, `recording`, `error`). `scripts/screenshots.sh`
 builds it with xcodegen, runs each state on a simulator and writes the
 cropped images under `Screenshots/`.
+
+## Localization
+
+The strings the composer shows itself (placeholder, menu rows, accessibility
+labels, dictation and attachment errors) live in
+`Sources/GlassComposer/Resources/Localizable.xcstrings`, English only so far.
+Add a language there and it applies in every host; pull requests with
+translations are welcome. Strings you pass in (`placeholder`, menu titles,
+`ComposerToggle.accessibilityLabel`) are yours to localize.
 
 ## Build & test
 

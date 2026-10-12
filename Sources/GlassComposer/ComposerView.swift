@@ -69,7 +69,7 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
         isSending: Bool = false,
         showsAttachments: Bool = true,
         leadingToggle: ComposerToggle? = nil,
-        placeholder: String = "Message",
+        placeholder: String = ComposerView.defaultPlaceholder,
         errorMessage: String? = nil,
         onSend: @escaping () -> Void,
         onStop: (() -> Void)? = nil,
@@ -92,6 +92,9 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
         self.menuExtras = menuExtras
         self.accessory = accessory
     }
+
+    /// "Message", localized; the placeholder when none is given.
+    public static var defaultPlaceholder: String { localized("Message") }
 
     private var canSend: Bool {
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isSending
@@ -205,17 +208,17 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
         .glassEffect(.regular, in: .circle)
         .frame(width: controlHeight, height: controlHeight)
         .contentShape(Circle())
-        .accessibilityLabel(isPlusMenuExpanded ? "Close menu" : "Open menu")
+        .accessibilityLabel(isPlusMenuExpanded ? localized("Close menu") : localized("Open menu"))
     }
 
     private var plusMenuPanel: some View {
         VStack(alignment: .leading, spacing: 0) {
             if showsAttachments {
                 PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                    ComposerPlusMenuRowLabel(systemImage: "photo", title: "Photos")
+                    ComposerPlusMenuRowLabel(systemImage: "photo", title: localized("Photos"))
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Photos")
+                .accessibilityLabel(localized("Photos"))
             }
 
             menuExtras()
@@ -236,7 +239,7 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(leadingToggle.accessibilityLabel)
-                .accessibilityValue(leadingToggle.isOn ? "On" : "Off")
+                .accessibilityValue(leadingToggle.isOn ? localized("On") : localized("Off"))
                 .accessibilityAddTraits(leadingToggle.isOn ? .isSelected : [])
             }
 
@@ -251,7 +254,7 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
                     .foregroundStyle(isRecording ? .red : .primary)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(isRecording ? "Stop speech input" : "Start speech input")
+            .accessibilityLabel(isRecording ? localized("Stop speech input") : localized("Start speech input"))
         }
         .padding(.leading, leadingToggle == nil ? 16 : 12)
         .padding(.trailing, 12)
@@ -278,7 +281,7 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
         .contentShape(Circle())
         .disabled(!canSend)
         .keyboardShortcut(.return, modifiers: .command)
-        .accessibilityLabel("Send")
+        .accessibilityLabel(localized("Send"))
     }
 
     private var stopButton: some View {
@@ -294,7 +297,7 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
         .glassEffect(.regular, in: .circle)
         .frame(width: controlHeight, height: controlHeight)
         .contentShape(Circle())
-        .accessibilityLabel("Stop")
+        .accessibilityLabel(localized("Stop"))
     }
 
     private func send() {
@@ -323,7 +326,7 @@ extension ComposerView where Accessory == EmptyView {
         isSending: Bool = false,
         showsAttachments: Bool = true,
         leadingToggle: ComposerToggle? = nil,
-        placeholder: String = "Message",
+        placeholder: String = ComposerView.defaultPlaceholder,
         errorMessage: String? = nil,
         onSend: @escaping () -> Void,
         onStop: (() -> Void)? = nil,
@@ -361,7 +364,7 @@ extension ComposerView where MenuExtras == EmptyView {
         isSending: Bool = false,
         showsAttachments: Bool = true,
         leadingToggle: ComposerToggle? = nil,
-        placeholder: String = "Message",
+        placeholder: String = ComposerView.defaultPlaceholder,
         errorMessage: String? = nil,
         onSend: @escaping () -> Void,
         onStop: (() -> Void)? = nil,
@@ -398,7 +401,7 @@ extension ComposerView where MenuExtras == EmptyView, Accessory == EmptyView {
         isSending: Bool = false,
         showsAttachments: Bool = true,
         leadingToggle: ComposerToggle? = nil,
-        placeholder: String = "Message",
+        placeholder: String = ComposerView.defaultPlaceholder,
         errorMessage: String? = nil,
         onSend: @escaping () -> Void,
         onStop: (() -> Void)? = nil,

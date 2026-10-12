@@ -1,0 +1,23 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "Message": {},
+    "Photos": {},
+    "Open menu": {},
+    "Close menu": {},
+    "On": {},
+    "Off": {},
+    "Start speech input": {},
+    "Stop speech input": {},
+    "Send": {},
+    "Stop": {},
+    "Microphone permission is required.": {},
+    "Speech recognition permission is required.": {},
+    "Speech recognition is not available for this language.": {},
+    "Could not download the on-device speech model. Check your connection and try again.": {},
+    "Could not start speech recognition.": {},
+    "Couldn't load that photo.": {},
+    "That file isn't an image the composer can send.": {}
+  },
+  "version": "1.0"
+}

@@ -39,3 +39,12 @@ struct SpeechAudioSessionPolicyTests {
         #expect(SpeechAudioSessionPolicy.managed != .hostManaged)
     }
 }
+
+@Suite("Localization")
+struct LocalizationTests {
+    @Test("Built-in strings resolve through the package catalog")
+    func catalogResolves() {
+        #expect(localized("Send") == "Send")
+        #expect(SpeechInputFailure.microphoneDenied.errorDescription == "Microphone permission is required.")
+    }
+}

@@ -71,9 +71,9 @@ public enum ComposerAttachmentFailure: Error, LocalizedError, Equatable, Sendabl
     public var errorDescription: String? {
         switch self {
         case .unavailable:
-            return "Couldn't load that photo."
+            return localized("Couldn't load that photo.")
         case .notAnImage:
-            return "That file isn't an image the composer can send."
+            return localized("That file isn't an image the composer can send.")
         }
     }
 }

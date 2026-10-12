@@ -379,15 +379,15 @@ public enum SpeechInputFailure: Error, LocalizedError, Equatable, Sendable {
     public var errorDescription: String? {
         switch self {
         case .microphoneDenied:
-            return "Microphone permission is required."
+            return localized("Microphone permission is required.")
         case .speechDenied:
-            return "Speech recognition permission is required."
+            return localized("Speech recognition permission is required.")
         case .localeNotSupported:
-            return "Speech recognition is not available for this language."
+            return localized("Speech recognition is not available for this language.")
         case .assetUnavailable:
-            return "Could not download the on-device speech model. Check your connection and try again."
+            return localized("Could not download the on-device speech model. Check your connection and try again.")
         case .audioSetupFailed:
-            return "Could not start speech recognition."
+            return localized("Could not start speech recognition.")
         }
     }
 }
