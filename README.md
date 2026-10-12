@@ -87,3 +87,7 @@ See the doc comments on `ComposerView.init` for every parameter.
 - `swiftlint lint`
 
 Swift 6 language mode, swift-tools 6.0.
+
+## License
+
+MIT. See `LICENSE`.
