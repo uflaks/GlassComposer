@@ -2,7 +2,7 @@
 
 A Liquid Glass chat composer for SwiftUI: multi-line text field, on-device
 dictation (`SpeechAnalyzer`), photo attachments prepared as JPEG, an optional
-web-search toggle, an optional `+` menu, an optional accessory control, and a
+leading toggle (web search, say), an optional `+` menu, an optional accessory control, and a
 send/stop button. Runs on iOS 26 and macOS 26 (the package floor is iOS 17 /
 macOS 14 so it can sit next to older code; every type is
 `@available(iOS 26, macOS 26, *)`).
@@ -24,7 +24,7 @@ macOS 14 so it can sit next to older code; every type is
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/uflaks/GlassComposer", from: "0.3.1")
+    .package(url: "https://github.com/uflaks/GlassComposer", from: "0.4.0")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -77,7 +77,7 @@ struct ChatScreen: View {
 ```
 
 Other initializers add `onStop` (turns send into a stop button while
-`isSending`), the web-search globe (`showsWebSearch` + `onToggleWebSearch`),
+`isSending`), a `leadingToggle` (a `ComposerToggle` with its own SF Symbol, state and action, for things like web search),
 extra `+` menu rows (`menuExtras`, built from `ComposerPlusMenuButton`), and an
 `accessory` control between the field and the send button
 (`ComposerAccessoryMenu` is a round glass menu sized like the send button).
@@ -85,7 +85,8 @@ See the doc comments on `ComposerView.init` for every parameter.
 
 ## Layout
 
-- `ComposerView` — the composer itself.
+- `ComposerView` — the composer itself; `ComposerToggle` describes its optional
+  leading on/off control.
 - `ComposerPlusMenuButton`, `ComposerAccessoryMenu` — menu building blocks.
 - `ComposerAttachmentState`, `ComposerAttachmentSummary` — Photos picker →
   JPEG, normalized under a `ComposerAttachmentPolicy` (longest edge and byte

@@ -13,7 +13,7 @@ enum ComposerMetrics {
 }
 
 /// A Liquid Glass chat composer: a growing
-/// text field with dictation, an optional web-search toggle, an optional
+/// text field with dictation, an optional leading toggle (web search, say), an optional
 /// `+` menu (Photos plus caller-supplied `ComposerPlusMenuButton` rows), an
 /// optional accessory control between the field and the send button
 /// (typically a `ComposerAccessoryMenu`), and a send button that turns into a
@@ -26,14 +26,12 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
     var isRecording: Bool
     var isSending: Bool
     var showsAttachments: Bool
-    var showsWebSearch: Bool
-    var webSearchEnabled: Bool
+    var leadingToggle: ComposerToggle?
     var placeholder: String
     var errorMessage: String?
     var onSend: () -> Void
     var onStop: (() -> Void)?
     var onToggleSpeech: () -> Void
-    var onToggleWebSearch: (() -> Void)?
     @ViewBuilder var menuExtras: () -> MenuExtras
     @ViewBuilder var accessory: () -> Accessory
 
@@ -53,14 +51,13 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
     ///   - isSending: Disables send while a turn is in flight. With `onStop`
     ///     set, the send button becomes a stop button instead.
     ///   - showsAttachments: Whether the `+` menu offers Photos.
-    ///   - showsWebSearch: Whether the web-search globe is shown.
-    ///   - webSearchEnabled: Current web-search state for the globe.
+    ///   - leadingToggle: An on/off control at the leading edge of the field,
+    ///     or nil for none.
     ///   - placeholder: Text field placeholder.
     ///   - errorMessage: Shown above the field in red when non-nil.
     ///   - onSend: Called when the user sends; the caller reads `text`.
     ///   - onStop: Called from the stop button while `isSending`.
     ///   - onToggleSpeech: Start/stop dictation.
-    ///   - onToggleWebSearch: Toggle web search; required for the globe to appear.
     ///   - menuExtras: Extra rows for the `+` menu, typically `ComposerPlusMenuButton`s.
     ///   - accessory: A control shown between the text field and the send
     ///     button, sized like the other round controls. Use
@@ -72,14 +69,12 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
         isRecording: Bool,
         isSending: Bool = false,
         showsAttachments: Bool = true,
-        showsWebSearch: Bool = false,
-        webSearchEnabled: Bool = false,
+        leadingToggle: ComposerToggle? = nil,
         placeholder: String = "Message",
         errorMessage: String? = nil,
         onSend: @escaping () -> Void,
         onStop: (() -> Void)? = nil,
         onToggleSpeech: @escaping () -> Void,
-        onToggleWebSearch: (() -> Void)? = nil,
         @ViewBuilder menuExtras: @escaping () -> MenuExtras,
         @ViewBuilder accessory: @escaping () -> Accessory
     ) {
@@ -89,14 +84,12 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
         self.isRecording = isRecording
         self.isSending = isSending
         self.showsAttachments = showsAttachments
-        self.showsWebSearch = showsWebSearch
-        self.webSearchEnabled = webSearchEnabled
+        self.leadingToggle = leadingToggle
         self.placeholder = placeholder
         self.errorMessage = errorMessage
         self.onSend = onSend
         self.onStop = onStop
         self.onToggleSpeech = onToggleSpeech
-        self.onToggleWebSearch = onToggleWebSearch
         self.menuExtras = menuExtras
         self.accessory = accessory
     }
@@ -167,7 +160,7 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
         .sensoryFeedback(.impact(weight: .medium), trigger: sendPulse)
         .sensoryFeedback(.selection, trigger: isPlusMenuExpanded)
         .sensoryFeedback(.selection, trigger: isRecording)
-        .sensoryFeedback(.selection, trigger: webSearchEnabled)
+        .sensoryFeedback(.selection, trigger: leadingToggle?.isOn)
         .sensoryFeedback(.error, trigger: errorMessage) { _, newValue in
             newValue != nil
         }
@@ -236,15 +229,16 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
 
     private var messageField: some View {
         HStack(alignment: .center, spacing: 8) {
-            if showsWebSearch, let onToggleWebSearch {
-                Button(action: onToggleWebSearch) {
-                    Image(systemName: "globe")
+            if let leadingToggle {
+                Button(action: leadingToggle.action) {
+                    Image(systemName: leadingToggle.systemImage)
                         .font(.body.weight(.medium))
-                        .foregroundStyle(webSearchEnabled ? Color.accentColor : Color.secondary)
+                        .foregroundStyle(leadingToggle.isOn ? Color.accentColor : Color.secondary)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(webSearchEnabled ? "Disable web search" : "Enable web search")
-                .accessibilityAddTraits(webSearchEnabled ? .isSelected : [])
+                .accessibilityLabel(leadingToggle.accessibilityLabel)
+                .accessibilityValue(leadingToggle.isOn ? "On" : "Off")
+                .accessibilityAddTraits(leadingToggle.isOn ? .isSelected : [])
             }
 
             TextField(placeholder, text: $text, axis: .vertical)
@@ -260,7 +254,7 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
             .buttonStyle(.plain)
             .accessibilityLabel(isRecording ? "Stop speech input" : "Start speech input")
         }
-        .padding(.leading, showsWebSearch ? 12 : 16)
+        .padding(.leading, leadingToggle == nil ? 16 : 12)
         .padding(.trailing, 12)
         .padding(.vertical, 10)
         .frame(minHeight: controlHeight)
@@ -330,14 +324,12 @@ extension ComposerView where Accessory == EmptyView {
         isRecording: Bool,
         isSending: Bool = false,
         showsAttachments: Bool = true,
-        showsWebSearch: Bool = false,
-        webSearchEnabled: Bool = false,
+        leadingToggle: ComposerToggle? = nil,
         placeholder: String = "Message",
         errorMessage: String? = nil,
         onSend: @escaping () -> Void,
         onStop: (() -> Void)? = nil,
         onToggleSpeech: @escaping () -> Void,
-        onToggleWebSearch: (() -> Void)? = nil,
         @ViewBuilder menuExtras: @escaping () -> MenuExtras
     ) {
         self.init(
@@ -347,14 +339,12 @@ extension ComposerView where Accessory == EmptyView {
             isRecording: isRecording,
             isSending: isSending,
             showsAttachments: showsAttachments,
-            showsWebSearch: showsWebSearch,
-            webSearchEnabled: webSearchEnabled,
+            leadingToggle: leadingToggle,
             placeholder: placeholder,
             errorMessage: errorMessage,
             onSend: onSend,
             onStop: onStop,
             onToggleSpeech: onToggleSpeech,
-            onToggleWebSearch: onToggleWebSearch,
             menuExtras: menuExtras,
             accessory: { EmptyView() }
         )
@@ -373,14 +363,12 @@ extension ComposerView where MenuExtras == EmptyView {
         isRecording: Bool,
         isSending: Bool = false,
         showsAttachments: Bool = true,
-        showsWebSearch: Bool = false,
-        webSearchEnabled: Bool = false,
+        leadingToggle: ComposerToggle? = nil,
         placeholder: String = "Message",
         errorMessage: String? = nil,
         onSend: @escaping () -> Void,
         onStop: (() -> Void)? = nil,
         onToggleSpeech: @escaping () -> Void,
-        onToggleWebSearch: (() -> Void)? = nil,
         @ViewBuilder accessory: @escaping () -> Accessory
     ) {
         self.init(
@@ -390,14 +378,12 @@ extension ComposerView where MenuExtras == EmptyView {
             isRecording: isRecording,
             isSending: isSending,
             showsAttachments: showsAttachments,
-            showsWebSearch: showsWebSearch,
-            webSearchEnabled: webSearchEnabled,
+            leadingToggle: leadingToggle,
             placeholder: placeholder,
             errorMessage: errorMessage,
             onSend: onSend,
             onStop: onStop,
             onToggleSpeech: onToggleSpeech,
-            onToggleWebSearch: onToggleWebSearch,
             menuExtras: { EmptyView() },
             accessory: accessory
         )
@@ -415,14 +401,12 @@ extension ComposerView where MenuExtras == EmptyView, Accessory == EmptyView {
         isRecording: Bool,
         isSending: Bool = false,
         showsAttachments: Bool = true,
-        showsWebSearch: Bool = false,
-        webSearchEnabled: Bool = false,
+        leadingToggle: ComposerToggle? = nil,
         placeholder: String = "Message",
         errorMessage: String? = nil,
         onSend: @escaping () -> Void,
         onStop: (() -> Void)? = nil,
-        onToggleSpeech: @escaping () -> Void,
-        onToggleWebSearch: (() -> Void)? = nil
+        onToggleSpeech: @escaping () -> Void
     ) {
         self.init(
             text: text,
@@ -431,14 +415,12 @@ extension ComposerView where MenuExtras == EmptyView, Accessory == EmptyView {
             isRecording: isRecording,
             isSending: isSending,
             showsAttachments: showsAttachments,
-            showsWebSearch: showsWebSearch,
-            webSearchEnabled: webSearchEnabled,
+            leadingToggle: leadingToggle,
             placeholder: placeholder,
             errorMessage: errorMessage,
             onSend: onSend,
             onStop: onStop,
             onToggleSpeech: onToggleSpeech,
-            onToggleWebSearch: onToggleWebSearch,
             menuExtras: { EmptyView() },
             accessory: { EmptyView() }
         )
@@ -460,12 +442,10 @@ extension ComposerView where MenuExtras == EmptyView, Accessory == EmptyView {
         selectedPhoto: .constant(nil),
         isFocused: $isFocused,
         isRecording: false,
-        showsWebSearch: true,
-        webSearchEnabled: true,
+        leadingToggle: ComposerToggle(systemImage: "globe", isOn: true, accessibilityLabel: "Web search") {},
         errorMessage: nil,
         onSend: {},
         onToggleSpeech: {},
-        onToggleWebSearch: {},
         menuExtras: {
             ComposerPlusMenuButton(systemImage: "gearshape", title: "Settings") {}
             ComposerPlusMenuButton(systemImage: "trash", title: "Clear", role: .destructive) {}

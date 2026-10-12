@@ -107,9 +107,11 @@ struct ShotScreen: View {
         default:
             ComposerView(
                 text: $text, selectedPhoto: $photo, isFocused: $focused,
-                isRecording: false, showsAttachments: true, showsWebSearch: true,
-                webSearchEnabled: webSearch,
-                onSend: {}, onToggleSpeech: {}, onToggleWebSearch: { webSearch.toggle() },
+                isRecording: false, showsAttachments: true,
+                leadingToggle: ComposerToggle(systemImage: "globe", isOn: webSearch, accessibilityLabel: "Web search") {
+                    webSearch.toggle()
+                },
+                onSend: {}, onToggleSpeech: {},
                 menuExtras: { extras }
             )
         }
