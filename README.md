@@ -24,7 +24,7 @@ macOS 14 so it can sit next to older code; every type is
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/uflaks/GlassComposer", from: "0.1.0")
+    .package(url: "https://github.com/uflaks/GlassComposer", from: "0.3.0")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -88,8 +88,10 @@ See the doc comments on `ComposerView.init` for every parameter.
 - `ComposerView` — the composer itself.
 - `ComposerPlusMenuButton`, `ComposerAccessoryMenu` — menu building blocks.
 - `ComposerAttachmentState`, `ComposerAttachmentSummary` — Photos picker →
-  prepared JPEG.
-- `VisionImagePreparer` — ImageIO downscale and encode, no UIKit.
+  JPEG, normalized under a `ComposerAttachmentPolicy` (longest edge and byte
+  budget; the defaults suit chat backends with small request limits, pass your
+  own to keep full-resolution images). The ImageIO encoder behind it has no
+  UIKit dependency.
 - `SpeechInputController`, `SpeechTranscriptAssembler` — on-device dictation.
 
 ## Example and screenshots
