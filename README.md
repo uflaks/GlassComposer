@@ -24,7 +24,7 @@ macOS 14 so it can sit next to older code; every type is
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/uflaks/GlassComposer", from: "0.3.0")
+    .package(url: "https://github.com/uflaks/GlassComposer", from: "0.3.1")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
