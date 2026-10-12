@@ -7,6 +7,19 @@ send/stop button. Runs on iOS 26 and macOS 26 (the package floor is iOS 17 /
 macOS 14 so it can sit next to older code; every type is
 `@available(iOS 26, macOS 26, *)`).
 
+<p align="center">
+  <img src="Screenshots/empty.png" width="300" alt="Composer with the + menu, web-search globe, dictation mic and send button over a chat">
+  <img src="Screenshots/empty-dark.png" width="300" alt="The same composer in dark mode">
+</p>
+<p align="center">
+  <img src="Screenshots/typed.png" width="300" alt="The field grown to two lines of draft text">
+  <img src="Screenshots/accessory.png" width="300" alt="An accessory menu button between the field and the send button">
+</p>
+<p align="center">
+  <img src="Screenshots/recording.png" width="300" alt="Dictation running: red mic and a Listening placeholder">
+  <img src="Screenshots/sending.png" width="300" alt="A turn in flight: the send button has become a stop button">
+</p>
+
 ## Install
 
 ```swift
@@ -78,6 +91,14 @@ See the doc comments on `ComposerView.init` for every parameter.
   prepared JPEG.
 - `VisionImagePreparer` — ImageIO downscale and encode, no UIKit.
 - `SpeechInputController`, `SpeechTranscriptAssembler` — on-device dictation.
+
+## Example and screenshots
+
+`Example/ComposerShots` is a small iOS app that mounts the composer over a
+mock chat; a `SHOT` environment variable picks the state (`empty`, `typed`,
+`accessory`, `sending`, `recording`, `error`). `scripts/screenshots.sh`
+builds it with xcodegen, runs each state on a simulator and writes the
+cropped images under `Screenshots/`.
 
 ## Build & test
 

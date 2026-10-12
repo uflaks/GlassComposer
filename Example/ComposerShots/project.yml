@@ -1,0 +1,26 @@
+name: ComposerShots
+options:
+  bundleIdPrefix: no.eidlaug.shots
+  deploymentTarget:
+    iOS: "26.0"
+packages:
+  GlassComposer:
+    path: ../..
+targets:
+  ComposerShots:
+    type: application
+    platform: iOS
+    sources: [Sources]
+    dependencies:
+      - package: GlassComposer
+    info:
+      path: Info.plist
+      properties:
+        UILaunchScreen: {}
+        NSMicrophoneUsageDescription: Dictation.
+        NSSpeechRecognitionUsageDescription: Dictation.
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+    settings:
+      base:
+        SWIFT_VERSION: "6.0"
+        CODE_SIGNING_ALLOWED: NO

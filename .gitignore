@@ -12,3 +12,7 @@ DerivedData/
 
 # Uncommitted local-override workspaces in consumer apps
 *Dev.xcworkspace/
+
+# Example app
+Example/ComposerShots/.derived/
+Example/ComposerShots/ComposerShots.xcodeproj/
