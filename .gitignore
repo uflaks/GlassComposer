@@ -16,3 +16,4 @@ DerivedData/
 # Example app
 Example/ComposerShots/.derived/
 Example/ComposerShots/ComposerShots.xcodeproj/
+Example/ComposerShots/Info.plist
