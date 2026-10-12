@@ -1,0 +1,14 @@
+# Swift / Xcode
+.build/
+.swiftpm/
+DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+**/__pycache__/
+*.py[cod]
+
+# macOS
+.DS_Store
+
+# Uncommitted local-override workspaces in consumer apps
+*Dev.xcworkspace/
