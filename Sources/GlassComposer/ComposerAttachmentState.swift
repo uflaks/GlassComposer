@@ -1,6 +1,6 @@
 //
 //  ComposerAttachmentState.swift
-//  MaloryComposer
+//  GlassComposer
 //
 
 import Observation

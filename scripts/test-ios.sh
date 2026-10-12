@@ -14,7 +14,7 @@ if [ $# -gt 0 ]; then
 fi
 
 xcodebuild test \
-  -scheme MaloryComposer \
+  -scheme GlassComposer \
   -destination "platform=iOS Simulator,name=${SIMULATOR}" \
   ${ONLY[@]+"${ONLY[@]}"} 2>&1 \
   | grep -E 'error:|warning: .*Tests/|✔|✘|↳|TEST (SUCCEEDED|FAILED)' | grep -v cachedGenerators

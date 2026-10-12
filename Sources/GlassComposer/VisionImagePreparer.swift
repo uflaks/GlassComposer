@@ -1,6 +1,6 @@
 //
 //  VisionImagePreparer.swift
-//  MaloryComposer
+//  GlassComposer
 //
 
 import CoreGraphics

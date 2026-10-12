@@ -1,5 +1,5 @@
 import Testing
-@testable import MaloryComposer
+@testable import GlassComposer
 
 @Suite("Speech transcript assembly")
 struct SpeechTranscriptAssemblerTests {

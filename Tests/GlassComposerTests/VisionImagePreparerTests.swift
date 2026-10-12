@@ -3,7 +3,7 @@ import Foundation
 import ImageIO
 import Testing
 import UniformTypeIdentifiers
-@testable import MaloryComposer
+@testable import GlassComposer
 
 @Suite("Vision image preparation")
 struct VisionImagePreparerTests {

@@ -2,16 +2,16 @@
 import PackageDescription
 
 let package = Package(
-    name: "MaloryComposer",
+    name: "GlassComposer",
     platforms: [
         .iOS(.v17),
         .macOS(.v14)
     ],
     products: [
-        .library(name: "MaloryComposer", targets: ["MaloryComposer"])
+        .library(name: "GlassComposer", targets: ["GlassComposer"])
     ],
     targets: [
-        .target(name: "MaloryComposer"),
-        .testTarget(name: "MaloryComposerTests", dependencies: ["MaloryComposer"])
+        .target(name: "GlassComposer"),
+        .testTarget(name: "GlassComposerTests", dependencies: ["GlassComposer"])
     ]
 )

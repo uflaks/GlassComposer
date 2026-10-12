@@ -1,6 +1,6 @@
 //
 //  ComposerPlusMenu.swift
-//  MaloryComposer
+//  GlassComposer
 //
 
 import SwiftUI

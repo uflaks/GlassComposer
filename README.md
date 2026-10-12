@@ -1,4 +1,4 @@
-# MaloryComposer
+# GlassComposer
 
 A Liquid Glass chat composer for SwiftUI: multi-line text field, on-device
 dictation (`SpeechAnalyzer`), photo attachments prepared as JPEG, an optional
@@ -11,11 +11,11 @@ macOS 14 so it can sit next to older code; every type is
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/uflaks/MaloryComposer", from: "0.1.0")
+    .package(url: "https://github.com/uflaks/GlassComposer", from: "0.1.0")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
-        .product(name: "MaloryComposer", package: "MaloryComposer")
+        .product(name: "GlassComposer", package: "GlassComposer")
     ])
 ]
 ```
@@ -37,7 +37,7 @@ A sandboxed macOS app also needs the Audio Input entitlement
 ## Usage
 
 ```swift
-import MaloryComposer
+import GlassComposer
 
 struct ChatScreen: View {
     @State private var draft = ""

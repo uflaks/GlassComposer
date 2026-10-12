@@ -1,6 +1,6 @@
 //
 //  ComposerView.swift
-//  MaloryComposer
+//  GlassComposer
 //
 
 import PhotosUI
@@ -12,7 +12,7 @@ enum ComposerMetrics {
     static let controlHeight: CGFloat = 44
 }
 
-/// The Liquid Glass chat composer shared by Malory and AgentDeck: a growing
+/// A Liquid Glass chat composer: a growing
 /// text field with dictation, an optional web-search toggle, an optional
 /// `+` menu (Photos plus caller-supplied `ComposerPlusMenuButton` rows), an
 /// optional accessory control between the field and the send button
@@ -150,7 +150,7 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         // Hosts mount the composer over their scrolling content (`safeAreaInset`
-        // in Malory), so make the whole padded bounds hit-testable. Otherwise
+        // over a List), so make the whole padded bounds hit-testable. Otherwise
         // touches in the padding and the gaps between controls fall through to
         // the rows scrolled beneath the glass.
         .contentShape(Rectangle())

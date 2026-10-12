@@ -2,9 +2,9 @@
 import SwiftUI
 import Testing
 import UIKit
-@testable import MaloryComposer
+@testable import GlassComposer
 
-/// Hosts the composer the way Malory does (`safeAreaInset` over a List) in a
+/// Hosts the composer the way a chat app does (`safeAreaInset` over a List) in a
 /// real window and hit-tests it with UIKit, so a regression where taps fall
 /// through to the rows beneath fails here instead of in the consuming app.
 @MainActor

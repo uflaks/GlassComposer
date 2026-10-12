@@ -1,6 +1,6 @@
 //
 //  SpeechTranscriptAssembler.swift
-//  MaloryComposer
+//  GlassComposer
 //
 
 import Foundation

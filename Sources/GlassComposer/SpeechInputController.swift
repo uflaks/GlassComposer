@@ -1,6 +1,6 @@
 //
 //  SpeechInputController.swift
-//  MaloryComposer
+//  GlassComposer
 //
 
 import AVFoundation

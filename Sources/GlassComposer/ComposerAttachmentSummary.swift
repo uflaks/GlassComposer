@@ -1,6 +1,6 @@
 //
 //  ComposerAttachmentSummary.swift
-//  MaloryComposer
+//  GlassComposer
 //
 
 import Foundation
