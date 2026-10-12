@@ -16,10 +16,10 @@ struct Message: Identifiable {
 }
 
 let script: [Message] = [
-    Message(mine: true, text: "Can you summarise the last three commits on main?"),
-    Message(mine: false, text: "Sure. The composer moved into its own package, AgentKit got a build fix after the AzureDevOpsKit move, and the Norwegian speech presets landed."),
+    Message(mine: true, text: "Can you summarise what changed in the composer this week?"),
+    Message(mine: false, text: "Sure. It became its own package, the attachment limits are a policy now, and dictation reports typed failures."),
     Message(mine: true, text: "Nice. Anything that still needs a tag?"),
-    Message(mine: false, text: "GlassComposer is tagged. The three apps already point at it."),
+    Message(mine: false, text: "The latest version is tagged. Hosts pick it up on their next resolve."),
     Message(mine: true, text: "What does the composer need from the host app?"),
     Message(mine: false, text: "Two Info.plist keys: NSMicrophoneUsageDescription and NSSpeechRecognitionUsageDescription. Dictation runs on device through SpeechAnalyzer, and photos come in through PhotosPicker."),
     Message(mine: true, text: "And on the Mac?"),
@@ -31,7 +31,7 @@ let script: [Message] = [
 struct ShotScreen: View {
     let shot: String
     @State private var text = ""
-    @State private var photo: PhotosPickerItem?
+    @State private var attachments = ComposerAttachmentState()
     @State private var webSearch = true
     @FocusState private var focused: Bool
 
@@ -43,7 +43,7 @@ struct ShotScreen: View {
                     Text(message.text)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
-                        .background(message.mine ? Color.accentColor.opacity(0.18) : Color(.secondarySystemBackground), in: .rect(cornerRadius: 18))
+                        .background(message.mine ? Color.accentColor.opacity(0.18) : Color.secondary.opacity(0.12), in: .rect(cornerRadius: 18))
                     if !message.mine { Spacer(minLength: 48) }
                 }
                 .listRowSeparator(.hidden)
@@ -52,8 +52,17 @@ struct ShotScreen: View {
             .listStyle(.plain)
             .defaultScrollAnchor(.bottom)
             .navigationTitle("Chat")
+            #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
-            .safeAreaInset(edge: .bottom) { composer }
+            #endif
+            .safeAreaInset(edge: .bottom) {
+                VStack(spacing: 0) {
+                    if let attachment = attachments.attachment {
+                        ComposerAttachedFileLabel(filename: attachment.filename)
+                    }
+                    composer
+                }
+            }
         }
         .onAppear {
             switch shot {
@@ -68,7 +77,7 @@ struct ShotScreen: View {
         switch shot {
         case "sending":
             ComposerView(
-                text: $text, selectedPhoto: $photo, isFocused: $focused,
+                text: $text, selectedPhoto: $attachments.selectedPhoto, isFocused: $focused,
                 isRecording: false, isSending: true, showsAttachments: true,
                 placeholder: "Message",
                 onSend: {}, onStop: {}, onToggleSpeech: {},
@@ -76,7 +85,7 @@ struct ShotScreen: View {
             )
         case "accessory":
             ComposerView(
-                text: $text, selectedPhoto: $photo, isFocused: $focused,
+                text: $text, selectedPhoto: $attachments.selectedPhoto, isFocused: $focused,
                 isRecording: false, showsAttachments: false,
                 placeholder: "Prompt",
                 onSend: {}, onToggleSpeech: {},
@@ -90,7 +99,7 @@ struct ShotScreen: View {
             )
         case "recording":
             ComposerView(
-                text: $text, selectedPhoto: $photo, isFocused: $focused,
+                text: $text, selectedPhoto: $attachments.selectedPhoto, isFocused: $focused,
                 isRecording: true, showsAttachments: true,
                 placeholder: "Listening…",
                 onSend: {}, onToggleSpeech: {},
@@ -98,15 +107,15 @@ struct ShotScreen: View {
             )
         case "error":
             ComposerView(
-                text: $text, selectedPhoto: $photo, isFocused: $focused,
+                text: $text, selectedPhoto: $attachments.selectedPhoto, isFocused: $focused,
                 isRecording: false, showsAttachments: true,
-                errorMessage: "Speech recognition is not available for this language.",
+                errorMessage: attachments.errorMessage ?? "Speech recognition is not available for this language.",
                 onSend: {}, onToggleSpeech: {},
                 menuExtras: { extras }
             )
         default:
             ComposerView(
-                text: $text, selectedPhoto: $photo, isFocused: $focused,
+                text: $text, selectedPhoto: $attachments.selectedPhoto, isFocused: $focused,
                 isRecording: false, showsAttachments: true,
                 leadingToggle: ComposerToggle(systemImage: "globe", isOn: webSearch, accessibilityLabel: "Web search") {
                     webSearch.toggle()

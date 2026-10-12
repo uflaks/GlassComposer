@@ -26,7 +26,10 @@ nonisolated enum ComposerImageEncoder {
             }
             maxDimension *= 0.7
         }
-        guard let fallback = decode(source, maxDimension: 1024) else { return nil }
+        // Last resort: the smallest size the policy allows at low quality.
+        // The byte budget is best effort from here; a tiny budget with a
+        // large dimension can still come out over.
+        guard let fallback = decode(source, maxDimension: min(1024, policy.maxPixelDimension)) else { return nil }
         return jpegData(fallback, quality: 0.35)
     }
 

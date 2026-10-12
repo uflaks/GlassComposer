@@ -20,13 +20,18 @@ struct FailureTests {
 
     @Test("errorMessage mirrors failure on the attachment state")
     @MainActor
-    func attachmentStateMirrorsFailure() {
+    func attachmentStateMirrorsFailure() async {
         let state = ComposerAttachmentState()
         #expect(state.errorMessage == nil)
+        #expect(!state.isLoading)
         state.failure = .notAnImage
         #expect(state.errorMessage == ComposerAttachmentFailure.notAnImage.errorDescription)
+        // Deselecting clears the stale error as well as the attachment.
+        await state.loadSelectedPhoto()
+        #expect(state.failure == nil)
         state.clear()
         #expect(state.failure == nil)
+        #expect(!state.isLoading)
     }
 }
 
@@ -37,6 +42,8 @@ struct SpeechAudioSessionPolicyTests {
         #expect(SpeechAudioSessionPolicy.managed.managesSession)
         #expect(!SpeechAudioSessionPolicy.hostManaged.managesSession)
         #expect(SpeechAudioSessionPolicy.managed != .hostManaged)
+        #expect(SpeechAudioSessionPolicy.managed(category: .playAndRecord).managesSession)
+        #expect(SpeechAudioSessionPolicy.managed(category: .record) == .managed)
     }
 }
 

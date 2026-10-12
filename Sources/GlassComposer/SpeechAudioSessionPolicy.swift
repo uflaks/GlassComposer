@@ -24,9 +24,34 @@ public struct SpeechAudioSessionPolicy: Sendable, Equatable {
     /// activates a session that allows recording before starting dictation.
     public static let hostManaged = SpeechAudioSessionPolicy(managesSession: false)
 
+    /// Session categories a host can ask for without importing iOS-only
+    /// types; `managed(category:)` compiles in shared iOS/macOS code.
+    public enum Category: Sendable, Equatable {
+        /// Input only; other audio in the app stops. The default.
+        case record
+        /// Keeps the host's playback running (ducked) while dictating.
+        case playAndRecord
+    }
+
+    /// Like `managed` but with `.playAndRecord` when the host plays audio.
+    /// No-op on macOS, which has no audio session.
+    public static func managed(category: Category) -> SpeechAudioSessionPolicy {
+        #if os(iOS)
+        switch category {
+        case .record:
+            return managed
+        case .playAndRecord:
+            // Qualified on purpose: an unqualified `.playAndRecord` resolves
+            // to this enum and recurses.
+            return managed(category: AVAudioSession.Category.playAndRecord)
+        }
+        #else
+        return managed
+        #endif
+    }
+
     #if os(iOS)
-    /// Like `managed` but with the host's choice of session configuration,
-    /// for example `.playAndRecord` so spoken replies keep playing.
+    /// Full control on iOS: any `AVAudioSession` category, mode and options.
     public static func managed(
         category: AVAudioSession.Category,
         mode: AVAudioSession.Mode = .measurement,

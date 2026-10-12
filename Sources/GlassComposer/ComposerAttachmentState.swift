@@ -8,14 +8,21 @@ import PhotosUI
 import SwiftUI
 
 /// Photo-picker load state for a composer: bind `selectedPhoto` to
-/// `ComposerView`, call `loadSelectedPhoto()` when it changes, and read
-/// `imageData` when sending. Photos are normalized under `policy` as they
-/// load.
+/// `ComposerView` and read `imageData` when sending. A new selection loads
+/// and encodes by itself under `policy`; `isLoading` is true meanwhile, so
+/// disable send on it if the attachment matters.
 @Observable
 @MainActor
 public final class ComposerAttachmentState {
-    public var selectedPhoto: PhotosPickerItem?
+    public var selectedPhoto: PhotosPickerItem? {
+        didSet {
+            guard selectedPhoto != oldValue else { return }
+            Task { await loadSelectedPhoto() }
+        }
+    }
     public private(set) var attachment: ComposerAttachmentSummary?
+    /// A pick is being transferred from Photos or encoded.
+    public private(set) var isLoading = false
     /// Why the last pick could not become an attachment, or nil. Set it to
     /// nil to dismiss.
     public var failure: ComposerAttachmentFailure?
@@ -31,32 +38,53 @@ public final class ComposerAttachmentState {
     /// The prepared JPEG bytes of the attached photo, if any.
     public var imageData: Data? { attachment?.imageData }
 
+    /// Loads and encodes `selectedPhoto`. Runs automatically when the
+    /// selection changes; calling it again for a pick that is already loading
+    /// does nothing. A newer selection wins over a slower, older load.
     public func loadSelectedPhoto() async {
-        guard let selectedPhoto else {
+        guard let item = selectedPhoto else {
             attachment = nil
+            failure = nil
+            isLoading = false
+            loadingItem = nil
             return
         }
+        guard loadingItem != item else { return }
+        loadingItem = item
+        attachment = nil
+        failure = nil
+        isLoading = true
+        defer {
+            if selectedPhoto == item {
+                isLoading = false
+                loadingItem = nil
+            }
+        }
         do {
-            let picked = try await selectedPhoto.loadTransferable(type: PickedImage.self)
+            let picked = try await item.loadTransferable(type: PickedImage.self)
+            guard selectedPhoto == item else { return }
             let policy = self.policy
             let encoded = await Task.detached { picked.flatMap { policy.encode($0.data) } }.value
+            guard selectedPhoto == item else { return }
             if let picked, let encoded {
                 attachment = ComposerAttachmentSummary(filename: picked.filename + ".jpg", imageData: encoded)
-                failure = nil
             } else {
-                attachment = nil
                 failure = picked == nil ? .unavailable : .notAnImage
             }
         } catch {
-            attachment = nil
+            guard selectedPhoto == item else { return }
             failure = .unavailable
         }
     }
+
+    private var loadingItem: PhotosPickerItem?
 
     public func clear() {
         selectedPhoto = nil
         attachment = nil
         failure = nil
+        isLoading = false
+        loadingItem = nil
     }
 }
 

@@ -23,6 +23,7 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
     @Binding var selectedPhoto: PhotosPickerItem?
     @FocusState.Binding var isFocused: Bool
     var isRecording: Bool
+    var isPreparingSpeech: Bool
     var isSending: Bool
     var showsAttachments: Bool
     var leadingToggle: ComposerToggle?
@@ -30,7 +31,7 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
     var errorMessage: String?
     var onSend: () -> Void
     var onStop: (() -> Void)?
-    var onToggleSpeech: () -> Void
+    var onToggleSpeech: (() -> Void)?
     @ViewBuilder var menuExtras: () -> MenuExtras
     @ViewBuilder var accessory: () -> Accessory
 
@@ -47,6 +48,8 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
     ///     when `showsAttachments` is false.
     ///   - isFocused: Focus state of the text field.
     ///   - isRecording: Whether dictation is active (drives the mic icon).
+    ///   - isPreparingSpeech: Dictation is asking for permission, downloading
+    ///     a model or starting audio; the mic shows a spinner.
     ///   - isSending: Disables send while a turn is in flight. With `onStop`
     ///     set, the send button becomes a stop button instead.
     ///   - showsAttachments: Whether the `+` menu offers Photos.
@@ -56,7 +59,8 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
     ///   - errorMessage: Shown above the field in red when non-nil.
     ///   - onSend: Called when the user sends; the caller reads `text`.
     ///   - onStop: Called from the stop button while `isSending`.
-    ///   - onToggleSpeech: Start/stop dictation.
+    ///   - onToggleSpeech: Start/stop dictation. Nil hides the mic button; use
+    ///     that when the host does not declare the microphone usage string.
     ///   - menuExtras: Extra rows for the `+` menu, typically `ComposerPlusMenuButton`s.
     ///   - accessory: A control shown between the text field and the send
     ///     button, sized like the other round controls. Use
@@ -66,6 +70,7 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
         selectedPhoto: Binding<PhotosPickerItem?>,
         isFocused: FocusState<Bool>.Binding,
         isRecording: Bool,
+        isPreparingSpeech: Bool = false,
         isSending: Bool = false,
         showsAttachments: Bool = true,
         leadingToggle: ComposerToggle? = nil,
@@ -73,7 +78,7 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
         errorMessage: String? = nil,
         onSend: @escaping () -> Void,
         onStop: (() -> Void)? = nil,
-        onToggleSpeech: @escaping () -> Void,
+        onToggleSpeech: (() -> Void)? = nil,
         @ViewBuilder menuExtras: @escaping () -> MenuExtras,
         @ViewBuilder accessory: @escaping () -> Accessory
     ) {
@@ -81,6 +86,7 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
         self._selectedPhoto = selectedPhoto
         self._isFocused = isFocused
         self.isRecording = isRecording
+        self.isPreparingSpeech = isPreparingSpeech
         self.isSending = isSending
         self.showsAttachments = showsAttachments
         self.leadingToggle = leadingToggle
@@ -104,6 +110,9 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
         isSending && onStop != nil
     }
 
+    // Decided by type: a `menuExtras` builder that is conditionally empty
+    // still counts as present, so pass `showsAttachments: false` and no
+    // `menuExtras` at all to drop the `+` button.
     private var showsPlusControl: Bool {
         showsAttachments || MenuExtras.self != EmptyView.self
     }
@@ -248,19 +257,31 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
                 .focused($isFocused)
                 .lineLimit(1...6)
 
-            Button(action: onToggleSpeech) {
-                Image(systemName: isRecording ? "mic.fill" : "mic")
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(isRecording ? .red : .primary)
+            if let onToggleSpeech {
+                Button(action: onToggleSpeech) {
+                    if isPreparingSpeech {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Image(systemName: isRecording ? "mic.fill" : "mic")
+                            .font(.body.weight(.medium))
+                            .foregroundStyle(isRecording ? .red : .primary)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(
+                    isRecording || isPreparingSpeech ? localized("Stop speech input") : localized("Start speech input")
+                )
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(isRecording ? localized("Stop speech input") : localized("Start speech input"))
         }
         .padding(.leading, leadingToggle == nil ? 16 : 12)
-        .padding(.trailing, 12)
+        .padding(.trailing, onToggleSpeech == nil ? 16 : 12)
         .padding(.vertical, 10)
         .frame(minHeight: controlHeight)
         .glassEffect(.regular, in: .rect(cornerRadius: controlHeight / 2, style: .continuous))
+        // Return sends on macOS (Option-Return inserts a newline). On iOS a
+        // vertical-axis field turns Return into a newline and never submits,
+        // so sending there is the button or ⌘Return on a hardware keyboard.
         .onSubmit(send)
     }
 
@@ -323,6 +344,7 @@ extension ComposerView where Accessory == EmptyView {
         selectedPhoto: Binding<PhotosPickerItem?>,
         isFocused: FocusState<Bool>.Binding,
         isRecording: Bool,
+        isPreparingSpeech: Bool = false,
         isSending: Bool = false,
         showsAttachments: Bool = true,
         leadingToggle: ComposerToggle? = nil,
@@ -330,7 +352,7 @@ extension ComposerView where Accessory == EmptyView {
         errorMessage: String? = nil,
         onSend: @escaping () -> Void,
         onStop: (() -> Void)? = nil,
-        onToggleSpeech: @escaping () -> Void,
+        onToggleSpeech: (() -> Void)? = nil,
         @ViewBuilder menuExtras: @escaping () -> MenuExtras
     ) {
         self.init(
@@ -338,6 +360,7 @@ extension ComposerView where Accessory == EmptyView {
             selectedPhoto: selectedPhoto,
             isFocused: isFocused,
             isRecording: isRecording,
+            isPreparingSpeech: isPreparingSpeech,
             isSending: isSending,
             showsAttachments: showsAttachments,
             leadingToggle: leadingToggle,
@@ -361,6 +384,7 @@ extension ComposerView where MenuExtras == EmptyView {
         selectedPhoto: Binding<PhotosPickerItem?>,
         isFocused: FocusState<Bool>.Binding,
         isRecording: Bool,
+        isPreparingSpeech: Bool = false,
         isSending: Bool = false,
         showsAttachments: Bool = true,
         leadingToggle: ComposerToggle? = nil,
@@ -368,7 +392,7 @@ extension ComposerView where MenuExtras == EmptyView {
         errorMessage: String? = nil,
         onSend: @escaping () -> Void,
         onStop: (() -> Void)? = nil,
-        onToggleSpeech: @escaping () -> Void,
+        onToggleSpeech: (() -> Void)? = nil,
         @ViewBuilder accessory: @escaping () -> Accessory
     ) {
         self.init(
@@ -376,6 +400,7 @@ extension ComposerView where MenuExtras == EmptyView {
             selectedPhoto: selectedPhoto,
             isFocused: isFocused,
             isRecording: isRecording,
+            isPreparingSpeech: isPreparingSpeech,
             isSending: isSending,
             showsAttachments: showsAttachments,
             leadingToggle: leadingToggle,
@@ -398,6 +423,7 @@ extension ComposerView where MenuExtras == EmptyView, Accessory == EmptyView {
         selectedPhoto: Binding<PhotosPickerItem?>,
         isFocused: FocusState<Bool>.Binding,
         isRecording: Bool,
+        isPreparingSpeech: Bool = false,
         isSending: Bool = false,
         showsAttachments: Bool = true,
         leadingToggle: ComposerToggle? = nil,
@@ -405,13 +431,14 @@ extension ComposerView where MenuExtras == EmptyView, Accessory == EmptyView {
         errorMessage: String? = nil,
         onSend: @escaping () -> Void,
         onStop: (() -> Void)? = nil,
-        onToggleSpeech: @escaping () -> Void
+        onToggleSpeech: (() -> Void)? = nil
     ) {
         self.init(
             text: text,
             selectedPhoto: selectedPhoto,
             isFocused: isFocused,
             isRecording: isRecording,
+            isPreparingSpeech: isPreparingSpeech,
             isSending: isSending,
             showsAttachments: showsAttachments,
             leadingToggle: leadingToggle,

@@ -3,8 +3,8 @@
 A Liquid Glass chat composer for SwiftUI: multi-line text field, on-device
 dictation (`SpeechAnalyzer`), photo attachments prepared as JPEG, an optional
 leading toggle (web search, say), an optional `+` menu, an optional accessory control, and a
-send/stop button. Requires iOS 26 or macOS 26 (Liquid Glass and
-`SpeechAnalyzer`).
+send/stop button. iOS 26 and macOS 26 only (Liquid Glass and
+`SpeechAnalyzer`); other platforms are not declared.
 
 <p align="center">
   <img src="Screenshots/empty.png" width="300" alt="Composer with the + menu, web-search globe, dictation mic and send button over a chat">
@@ -23,7 +23,7 @@ send/stop button. Requires iOS 26 or macOS 26 (Liquid Glass and
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/uflaks/GlassComposer", from: "0.7.0")
+    .package(url: "https://github.com/uflaks/GlassComposer", from: "0.8.0")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -49,10 +49,16 @@ A sandboxed macOS app also needs the Audio Input entitlement
 On iOS the controller configures `AVAudioSession` for recording while
 dictating and restores what it found afterwards. If your app plays audio
 too, pass a policy: `SpeechInputController(audioSessionPolicy: .managed(category: .playAndRecord))`
-keeps playback alive, and `.hostManaged` leaves the session entirely to you.
+keeps playback alive and compiles on both platforms (a no-op on macOS);
+`.hostManaged` leaves the session entirely to you, and on iOS
+`.managed(category:mode:options:)` takes any `AVAudioSession` configuration.
 Dictation stops on its own when a call or Siri interrupts audio, or when the
-input route changes. It transcribes the device language unless you pass
+input route changes, and the controller tears everything down if you drop it
+mid-recording. It transcribes the device language unless you pass
 `SpeechInputController(locale:)` or set `locale` before the next recording.
+
+If your app has no use for dictation, leave `onToggleSpeech` nil and the mic
+button is not shown; you then need neither usage string.
 
 ## Usage
 
@@ -66,22 +72,38 @@ struct ChatScreen: View {
     @FocusState private var composerFocused: Bool
 
     var body: some View {
-        ComposerView(
-            text: $draft,
-            selectedPhoto: $attachments.selectedPhoto,
-            isFocused: $composerFocused,
-            isRecording: speech.isRecording,
-            onSend: { /* send draft + attachments.imageData */ },
-            onToggleSpeech: {
-                speech.toggleRecording(existingText: draft) { draft = $0 }
+        VStack(spacing: 0) {
+            if let attachment = attachments.attachment {
+                ComposerAttachedFileLabel(filename: attachment.filename)
             }
-        )
-        .onChange(of: attachments.selectedPhoto) {
-            Task { await attachments.loadSelectedPhoto() }
+            ComposerView(
+                text: $draft,
+                selectedPhoto: $attachments.selectedPhoto,
+                isFocused: $composerFocused,
+                isRecording: speech.isRecording,
+                isPreparingSpeech: speech.isPreparing,
+                errorMessage: attachments.errorMessage ?? speech.errorMessage,
+                onSend: {
+                    speech.stop()
+                    // send draft + attachments.imageData, then:
+                    draft = ""
+                    attachments.clear()
+                },
+                onToggleSpeech: {
+                    speech.toggleRecording(existingText: draft) { draft = $0 }
+                }
+            )
         }
     }
 }
 ```
+
+A picked photo loads and encodes by itself; `attachments.isLoading` is true
+meanwhile. The composer does not draw the attachment caption, hence the
+`ComposerAttachedFileLabel` above it. While dictating, each result replaces
+the field's text with the draft you passed plus everything spoken, so edits
+made mid-dictation are overwritten; call `speech.stop()` before reading the
+draft for good.
 
 Other initializers add `onStop` (turns send into a stop button while
 `isSending`), a `leadingToggle` (a `ComposerToggle` with its own SF Symbol, state and action, for things like web search),
@@ -100,7 +122,10 @@ See the doc comments on `ComposerView.init` for every parameter.
   budget; the defaults suit chat backends with small request limits, pass your
   own to keep full-resolution images). The ImageIO encoder behind it has no
   UIKit dependency.
-- `SpeechInputController`, `SpeechTranscriptAssembler` — on-device dictation;
+- `ComposerAttachedFileLabel` — the paperclip caption for an attached file.
+- `SpeechInputController`, `SpeechTranscriptAssembler` — on-device dictation
+  with `start`, `stop` and `toggleRecording`; `phase` is `idle`, `preparing`
+  (permissions, model download, audio setup) or `recording`.
   `SpeechAudioSessionPolicy` says who owns `AVAudioSession` on iOS.
   `failure` is a `SpeechInputFailure` (`.microphoneDenied`, `.speechDenied`,
   `.localeNotSupported`, `.assetUnavailable`, `.audioSetupFailed`) and
@@ -109,8 +134,8 @@ See the doc comments on `ComposerView.init` for every parameter.
 
 ## Example and screenshots
 
-`Example/ComposerShots` is a small iOS app that mounts the composer over a
-mock chat; a `SHOT` environment variable picks the state (`empty`, `typed`,
+`Example/ComposerShots` is a small iOS and macOS app that mounts the composer
+over a mock chat with attachments wired up; a `SHOT` environment variable picks the state (`empty`, `typed`,
 `accessory`, `sending`, `recording`, `error`). `scripts/screenshots.sh`
 builds it with xcodegen, runs each state on a simulator and writes the
 cropped images under `Screenshots/`.

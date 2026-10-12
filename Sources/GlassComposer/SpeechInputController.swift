@@ -16,7 +16,21 @@ import Speech
 @MainActor
 @Observable
 public final class SpeechInputController {
-    public private(set) var isRecording = false
+    /// Where dictation is: `preparing` covers permission prompts, a model
+    /// download and audio setup; `recording` means audio is flowing.
+    public enum Phase: Sendable, Equatable {
+        case idle
+        case preparing
+        case recording
+    }
+
+    public private(set) var phase: Phase = .idle
+
+    /// Audio is flowing to the recognizer. False while `preparing`.
+    public var isRecording: Bool { phase == .recording }
+
+    /// Permissions, model download or audio setup are in progress.
+    public var isPreparing: Bool { phase == .preparing }
 
     /// The language to transcribe. Read when dictation starts, so a host
     /// with a language picker can change it between recordings.
@@ -54,14 +68,49 @@ public final class SpeechInputController {
         self.audioSessionPolicy = audioSessionPolicy
     }
 
-    /// Starts dictation, or stops it if already recording. While recording,
-    /// `onTranscript` receives `existingText` plus everything spoken so far.
-    public func toggleRecording(existingText: String = "", onTranscript: @escaping (String) -> Void) {
-        if isRecording {
-            Task { await stopRecording() }
-        } else {
-            Task { await startRecording(existingText: existingText, onTranscript: onTranscript) }
+    isolated deinit {
+        // A host that drops the controller mid-recording (its view went away)
+        // must not leave the microphone hot. Only synchronous teardown is
+        // possible here; the analyzer is released without finalizing.
+        for observer in systemObservers {
+            NotificationCenter.default.removeObserver(observer)
         }
+        if tapInstalled {
+            audioEngine.inputNode.removeTap(onBus: 0)
+        }
+        if audioEngine.isRunning {
+            audioEngine.stop()
+        }
+        inputBuilder?.finish()
+        resultsTask?.cancel()
+        deactivateAudioSession()
+    }
+
+    /// Starts dictation, or stops it if already preparing or recording. While
+    /// recording, `onTranscript` receives `existingText` plus everything
+    /// spoken so far, replacing the field's text each time; edits the user
+    /// makes during dictation are overwritten by the next result.
+    public func toggleRecording(existingText: String = "", onTranscript: @escaping (String) -> Void) {
+        if phase == .idle {
+            start(existingText: existingText, onTranscript: onTranscript)
+        } else {
+            stop()
+        }
+    }
+
+    /// Starts dictation, superseding any start or recording in progress.
+    public func start(existingText: String = "", onTranscript: @escaping (String) -> Void) {
+        // Flip synchronously so a second tap before the Task runs sees the
+        // start and stops it instead of starting again.
+        phase = .preparing
+        Task { await startRecording(existingText: existingText, onTranscript: onTranscript) }
+    }
+
+    /// Stops dictation if it is preparing or recording. Safe to call on
+    /// send, on disappear, or when the scene goes to the background.
+    public func stop() {
+        guard phase != .idle else { return }
+        Task { await stopRecording() }
     }
 
     private func startRecording(existingText: String, onTranscript: @escaping (String) -> Void) async {
@@ -77,7 +126,7 @@ public final class SpeechInputController {
         finalizedText = ""
         volatileText = ""
         self.onTranscript = onTranscript
-        isRecording = true
+        phase = .preparing
 
         do {
             let micAllowed = await requestMicrophoneAuthorization()
@@ -157,7 +206,9 @@ public final class SpeechInputController {
         }
         try checkStillCurrent(generation)
 
-        let (sequence, builder) = AsyncStream<AnalyzerInput>.makeStream()
+        // ~5 s of 4096-frame buffers at 48 kHz; a stalled analyzer drops the
+        // oldest audio instead of growing without bound.
+        let (sequence, builder) = AsyncStream<AnalyzerInput>.makeStream(bufferingPolicy: .bufferingNewest(64))
         inputBuilder = builder
         try await analyzer.start(inputSequence: sequence)
         try checkStillCurrent(generation)
@@ -167,6 +218,7 @@ public final class SpeechInputController {
         audioEngine.prepare()
         try audioEngine.start()
         observeSystemAudioChanges()
+        phase = .recording
     }
 
     /// Stops dictation when the system takes the audio away: an interruption
@@ -202,14 +254,16 @@ public final class SpeechInputController {
         _ results: Results,
         generation: Int
     ) where Results: AsyncSequence, Results.Element: LiveSpeechResult {
+        // Hold `self` only per result: a strong capture across the loop would
+        // keep the controller (and the hot mic) alive after its host let go.
         resultsTask = Task { [weak self] in
-            guard let self else { return }
             do {
                 for try await result in results {
+                    guard let self else { return }
                     self.apply(result: result)
                 }
             } catch {
-                guard !Task.isCancelled, self.startGeneration == generation else { return }
+                guard let self, !Task.isCancelled, self.startGeneration == generation else { return }
                 self.failure = .audioSetupFailed
                 await self.stopRecording()
             }
@@ -243,10 +297,18 @@ public final class SpeechInputController {
             return
         }
 
-        guard let request = try await AssetInventory.assetInstallationRequest(supporting: [module]) else {
+        // A nil request means the assets are already installed; the call
+        // throws when the module is unsupported or no locale slot is free.
+        do {
+            guard let request = try await AssetInventory.assetInstallationRequest(supporting: [module]) else {
+                return
+            }
+            try await request.downloadAndInstall()
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
             throw SpeechInputFailure.assetUnavailable
         }
-        try await request.downloadAndInstall()
     }
 
     /// iOS routes the mic through `AVAudioSession`; macOS has no session, the
@@ -264,15 +326,16 @@ public final class SpeechInputController {
         #endif
     }
 
+    /// Undoes `activateAudioSession`, and nothing else: a stop that never
+    /// activated (permission denied, or the stop before every start) must not
+    /// deactivate the host's session or tell other apps to resume.
     private func deactivateAudioSession() {
         #if os(iOS)
-        guard audioSessionPolicy.managesSession else { return }
+        guard audioSessionPolicy.managesSession, let previous = restoredSessionConfiguration else { return }
+        restoredSessionConfiguration = nil
         let session = AVAudioSession.sharedInstance()
         try? session.setActive(false, options: .notifyOthersOnDeactivation)
-        if let previous = restoredSessionConfiguration {
-            try? session.setCategory(previous.category, mode: previous.mode, options: previous.options)
-            restoredSessionConfiguration = nil
-        }
+        try? session.setCategory(previous.category, mode: previous.mode, options: previous.options)
         #endif
     }
 
@@ -315,7 +378,7 @@ public final class SpeechInputController {
         resultsTask?.cancel()
         resultsTask = nil
         onTranscript = nil
-        isRecording = false
+        phase = .idle
 
         deactivateAudioSession()
     }
