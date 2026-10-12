@@ -24,7 +24,7 @@ macOS 14 so it can sit next to older code; every type is
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/uflaks/GlassComposer", from: "0.4.0")
+    .package(url: "https://github.com/uflaks/GlassComposer", from: "0.5.0")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -94,6 +94,10 @@ See the doc comments on `ComposerView.init` for every parameter.
   own to keep full-resolution images). The ImageIO encoder behind it has no
   UIKit dependency.
 - `SpeechInputController`, `SpeechTranscriptAssembler` — on-device dictation.
+  `failure` is a `SpeechInputFailure` (`.microphoneDenied`, `.speechDenied`,
+  `.localeNotSupported`, `.assetUnavailable`, `.audioSetupFailed`) and
+  `errorMessage` is its text; attachments report a `ComposerAttachmentFailure`
+  the same way.
 
 ## Example and screenshots
 

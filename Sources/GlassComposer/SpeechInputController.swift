@@ -19,7 +19,13 @@ import Speech
 @Observable
 public final class SpeechInputController {
     public private(set) var isRecording = false
-    public var errorMessage: String?
+
+    /// Why the last start failed, or nil. Set it to nil to dismiss. Inspect
+    /// the case to react (open Settings on `.microphoneDenied`, say).
+    public var failure: SpeechInputFailure?
+
+    /// `failure` as user-facing text.
+    public var errorMessage: String? { failure?.errorDescription }
 
     private let audioEngine = AVAudioEngine()
     private var analyzer: SpeechAnalyzer?
@@ -52,7 +58,7 @@ public final class SpeechInputController {
         // superseded start abandons the session instead of leaving the mic hot.
         let generation = startGeneration
 
-        errorMessage = nil
+        failure = nil
         draftPrefix = existingText
         finalizedText = ""
         volatileText = ""
@@ -79,11 +85,11 @@ public final class SpeechInputController {
             // session.
         } catch let failure as SpeechInputFailure {
             guard startGeneration == generation else { return }
-            errorMessage = failure.userMessage
+            self.failure = failure
             await stopRecording()
         } catch {
             guard startGeneration == generation else { return }
-            errorMessage = SpeechInputFailure.audioSetupFailed.userMessage
+            failure = .audioSetupFailed
             await stopRecording()
         }
     }
@@ -160,7 +166,7 @@ public final class SpeechInputController {
                 }
             } catch {
                 guard !Task.isCancelled, self.startGeneration == generation else { return }
-                self.errorMessage = SpeechInputFailure.audioSetupFailed.userMessage
+                self.failure = .audioSetupFailed
                 await self.stopRecording()
             }
         }
@@ -261,7 +267,7 @@ public final class SpeechInputController {
     private func requestMicrophoneAuthorization() async -> Bool {
         let allowed = await AVAudioApplication.requestRecordPermission()
         guard allowed else {
-            errorMessage = SpeechInputFailure.microphoneDenied.userMessage
+            failure = .microphoneDenied
             return false
         }
         return true
@@ -274,7 +280,7 @@ public final class SpeechInputController {
             }
         }
         guard status == .authorized else {
-            errorMessage = SpeechInputFailure.speechDenied.userMessage
+            failure = .speechDenied
             return false
         }
         return true
@@ -292,14 +298,23 @@ extension SpeechTranscriber.Result: LiveSpeechResult {}
 @available(iOS 26.0, macOS 26.0, *)
 extension DictationTranscriber.Result: LiveSpeechResult {}
 
-private enum SpeechInputFailure: Error {
+/// Why dictation could not start or stopped on its own.
+public enum SpeechInputFailure: Error, LocalizedError, Equatable, Sendable {
+    /// The user declined microphone access.
     case microphoneDenied
+    /// The user declined speech recognition.
     case speechDenied
+    /// Neither `SpeechTranscriber` nor `DictationTranscriber` supports the
+    /// device locale.
     case localeNotSupported
+    /// The on-device model for the locale is missing and could not be
+    /// downloaded.
     case assetUnavailable
+    /// The audio engine, session or analyzer failed to start, or the results
+    /// stream ended with an error.
     case audioSetupFailed
 
-    var userMessage: String {
+    public var errorDescription: String? {
         switch self {
         case .microphoneDenied:
             return "Microphone permission is required."
