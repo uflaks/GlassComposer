@@ -13,7 +13,6 @@ import Speech
 /// `NSSpeechRecognitionUsageDescription` in their Info.plist. Dictation stops
 /// by itself when the system interrupts audio (a call, Siri) or the audio
 /// route changes under the engine, so `isRecording` never lies.
-@available(iOS 26.0, macOS 26.0, *)
 @MainActor
 @Observable
 public final class SpeechInputController {
@@ -344,15 +343,12 @@ public final class SpeechInputController {
     }
 }
 
-@available(iOS 26.0, macOS 26.0, *)
 private protocol LiveSpeechResult: SpeechModuleResult {
     var text: AttributedString { get }
 }
 
-@available(iOS 26.0, macOS 26.0, *)
 extension SpeechTranscriber.Result: LiveSpeechResult {}
 
-@available(iOS 26.0, macOS 26.0, *)
 extension DictationTranscriber.Result: LiveSpeechResult {}
 
 #if os(iOS)

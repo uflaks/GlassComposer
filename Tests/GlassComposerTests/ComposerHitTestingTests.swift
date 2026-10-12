@@ -12,7 +12,6 @@ import UIKit
 struct ComposerHitTestingTests {
     @Test("Touches anywhere in the composer's bounds stay out of the list beneath")
     func composerAbsorbsTouches() async throws {
-        guard #available(iOS 26.0, *) else { return }
         let host = try await ComposerHost.make()
         let frame = try #require(host.composerFrame)
 
@@ -35,7 +34,6 @@ struct ComposerHitTestingTests {
     }
 }
 
-@available(iOS 26.0, *)
 @MainActor
 private struct ComposerHost {
     let window: UIWindow
@@ -72,7 +70,6 @@ private final class FrameBox {
     var composer: CGRect?
 }
 
-@available(iOS 26.0, *)
 private struct Harness: View {
     let frames: FrameBox
     @State private var text = ""

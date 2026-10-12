@@ -18,7 +18,6 @@ enum ComposerMetrics {
 /// optional accessory control between the field and the send button
 /// (typically a `ComposerAccessoryMenu`), and a send button that turns into a
 /// stop button while a turn is running when the caller provides `onStop`.
-@available(iOS 26.0, macOS 26.0, *)
 public struct ComposerView<MenuExtras: View, Accessory: View>: View {
     @Binding var text: String
     @Binding var selectedPhoto: PhotosPickerItem?
@@ -313,7 +312,6 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
     }
 }
 
-@available(iOS 26.0, macOS 26.0, *)
 extension ComposerView where Accessory == EmptyView {
     /// A composer with extra `+` menu rows and nothing between the field and
     /// the send button.
@@ -351,7 +349,6 @@ extension ComposerView where Accessory == EmptyView {
     }
 }
 
-@available(iOS 26.0, macOS 26.0, *)
 extension ComposerView where MenuExtras == EmptyView {
     /// A composer with an accessory control between the field and the send
     /// button and no extra `+` menu rows. The `+` button still appears when
@@ -390,7 +387,6 @@ extension ComposerView where MenuExtras == EmptyView {
     }
 }
 
-@available(iOS 26.0, macOS 26.0, *)
 extension ComposerView where MenuExtras == EmptyView, Accessory == EmptyView {
     /// A composer without extra `+` menu rows or an accessory. The `+` button
     /// still appears when `showsAttachments` is true.
@@ -427,7 +423,6 @@ extension ComposerView where MenuExtras == EmptyView, Accessory == EmptyView {
     }
 }
 
-@available(iOS 26.0, macOS 26.0, *)
 #Preview {
     @Previewable @FocusState var isFocused: Bool
 

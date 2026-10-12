@@ -3,9 +3,8 @@
 A Liquid Glass chat composer for SwiftUI: multi-line text field, on-device
 dictation (`SpeechAnalyzer`), photo attachments prepared as JPEG, an optional
 leading toggle (web search, say), an optional `+` menu, an optional accessory control, and a
-send/stop button. Runs on iOS 26 and macOS 26 (the package floor is iOS 17 /
-macOS 14 so it can sit next to older code; every type is
-`@available(iOS 26, macOS 26, *)`).
+send/stop button. Requires iOS 26 or macOS 26 (Liquid Glass and
+`SpeechAnalyzer`).
 
 <p align="center">
   <img src="Screenshots/empty.png" width="300" alt="Composer with the + menu, web-search globe, dictation mic and send button over a chat">

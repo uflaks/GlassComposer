@@ -10,7 +10,6 @@ import SwiftUI
 /// the text field and the send button. Put plain `Button`s (and `Divider`s)
 /// in `content`; the host decides what picking one does, typically dropping a
 /// prepared prompt into the draft.
-@available(iOS 26.0, macOS 26.0, *)
 public struct ComposerAccessoryMenu<Content: View>: View {
     let systemImage: String
     let accessibilityLabel: String
@@ -55,7 +54,6 @@ public struct ComposerAccessoryMenu<Content: View>: View {
     }
 }
 
-@available(iOS 26.0, macOS 26.0, *)
 #Preview {
     HStack(spacing: 8) {
         ComposerAccessoryMenu(systemImage: "bolt", accessibilityLabel: "Quick prompts") {
