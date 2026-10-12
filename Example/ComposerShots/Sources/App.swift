@@ -19,7 +19,7 @@ let script: [Message] = [
     Message(mine: true, text: "Can you summarise the last three commits on main?"),
     Message(mine: false, text: "Sure. The composer moved into its own package, AgentKit got a build fix after the AzureDevOpsKit move, and the Norwegian speech presets landed."),
     Message(mine: true, text: "Nice. Anything that still needs a tag?"),
-    Message(mine: false, text: "GlassComposer 0.2.0 is tagged. The three apps already point at it."),
+    Message(mine: false, text: "GlassComposer is tagged. The three apps already point at it."),
     Message(mine: true, text: "What does the composer need from the host app?"),
     Message(mine: false, text: "Two Info.plist keys: NSMicrophoneUsageDescription and NSSpeechRecognitionUsageDescription. Dictation runs on device through SpeechAnalyzer, and photos come in through PhotosPicker."),
     Message(mine: true, text: "And on the Mac?"),
@@ -57,7 +57,7 @@ struct ShotScreen: View {
         }
         .onAppear {
             switch shot {
-            case "typed", "accessory": text = "Draft a release note for 0.2.0 and keep it short."
+            case "typed", "accessory": text = "Draft a release note for this version and keep it short."
             case "sending": text = ""
             default: break
             }

@@ -133,12 +133,12 @@ translations are welcome. Strings you pass in (`placeholder`, menu titles,
 
 Swift 6 language mode, swift-tools 6.0.
 
-## License
-
-MIT. See `LICENSE`.
-
 ## Device testing
 
 `DEVICE-TESTING.md` lists what only a real iPhone or Mac can verify:
 dictation permissions and locales, audio-session behaviour, interruptions,
 attachments, VoiceOver, and the macOS chrome.
+
+## License
+
+MIT. See `LICENSE`.
