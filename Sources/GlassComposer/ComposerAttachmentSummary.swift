@@ -7,10 +7,10 @@ import Foundation
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// A picked photo, already downscaled and JPEG-encoded by
-/// `VisionImagePreparer` during transfer so the composer only ever holds
+/// A picked photo, already downscaled and JPEG-encoded under the owning
+/// `ComposerAttachmentState`'s policy, so the composer only ever holds
 /// upload-ready bytes.
-public struct ComposerAttachmentSummary: Transferable, Sendable {
+public struct ComposerAttachmentSummary: Sendable, Equatable {
     public let filename: String
     public let imageData: Data
 
@@ -18,23 +18,20 @@ public struct ComposerAttachmentSummary: Transferable, Sendable {
         self.filename = filename
         self.imageData = imageData
     }
+}
 
-    public static var transferRepresentation: some TransferRepresentation {
+/// What the Photos picker hands over before encoding: the original bytes and
+/// a filename to derive the JPEG name from.
+struct PickedImage: Transferable, Sendable {
+    let filename: String
+    let data: Data
+
+    static var transferRepresentation: some TransferRepresentation {
         DataRepresentation(importedContentType: .image) { data in
-            guard let prepared = VisionImagePreparer.prepare(data) else {
-                throw CocoaError(.fileReadCorruptFile)
-            }
-            return ComposerAttachmentSummary(filename: "photo.jpg", imageData: prepared)
+            PickedImage(filename: "photo", data: data)
         }
         ProxyRepresentation(importing: { (url: URL) in
-            let data = try Data(contentsOf: url)
-            guard let prepared = VisionImagePreparer.prepare(data) else {
-                throw CocoaError(.fileReadCorruptFile)
-            }
-            return ComposerAttachmentSummary(
-                filename: url.deletingPathExtension().lastPathComponent + ".jpg",
-                imageData: prepared
-            )
+            PickedImage(filename: url.deletingPathExtension().lastPathComponent, data: try Data(contentsOf: url))
         })
     }
 }

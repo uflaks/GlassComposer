@@ -5,17 +5,19 @@ import Testing
 import UniformTypeIdentifiers
 @testable import GlassComposer
 
-@Suite("Vision image preparation")
-struct VisionImagePreparerTests {
+@Suite("Attachment image encoding")
+struct ComposerImageEncoderTests {
+    private let policy = ComposerAttachmentPolicy.default
+
     @Test("A large noisy photo is downscaled and fits the JPEG byte budget")
     func downscalesLargePhoto() throws {
         let png = try #require(Self.noisyPNG(width: 4032, height: 3024))
 
-        let prepared = try #require(VisionImagePreparer.prepare(png))
+        let prepared = try #require(policy.encode(png))
 
-        #expect(prepared.count <= VisionImagePreparer.maxJPEGByteCount)
+        #expect(prepared.count <= policy.maxJPEGByteCount)
         let (width, height) = try #require(Self.pixelSize(of: prepared))
-        #expect(max(width, height) <= Int(VisionImagePreparer.maxPixelDimension))
+        #expect(max(width, height) <= Int(policy.maxPixelDimension))
         #expect(Self.utType(of: prepared) == .jpeg)
     }
 
@@ -23,17 +25,29 @@ struct VisionImagePreparerTests {
     func keepsSmallImageSize() throws {
         let png = try #require(Self.noisyPNG(width: 320, height: 200))
 
-        let prepared = try #require(VisionImagePreparer.prepare(png))
+        let prepared = try #require(policy.encode(png))
 
         let (width, height) = try #require(Self.pixelSize(of: prepared))
         #expect(width == 320)
         #expect(height == 200)
     }
 
+    @Test("A custom policy caps the longest edge")
+    func honoursCustomPolicy() throws {
+        let png = try #require(Self.noisyPNG(width: 1200, height: 900))
+        let small = ComposerAttachmentPolicy(maxPixelDimension: 300, maxJPEGByteCount: 750_000)
+
+        let prepared = try #require(small.encode(png))
+
+        let (width, height) = try #require(Self.pixelSize(of: prepared))
+        #expect(width == 300)
+        #expect(height == 225)
+    }
+
     @Test("Non-image bytes are rejected")
     func rejectsGarbage() {
-        #expect(VisionImagePreparer.prepare(Data("not an image".utf8)) == nil)
-        #expect(VisionImagePreparer.prepare(Data()) == nil)
+        #expect(policy.encode(Data("not an image".utf8)) == nil)
+        #expect(policy.encode(Data()) == nil)
     }
 
     // MARK: - Fixtures

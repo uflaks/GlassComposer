@@ -9,15 +9,22 @@ import SwiftUI
 
 /// Photo-picker load state for a composer: bind `selectedPhoto` to
 /// `ComposerView`, call `loadSelectedPhoto()` when it changes, and read
-/// `imageData` when sending.
+/// `imageData` when sending. Photos are normalized under `policy` as they
+/// load.
 @Observable
 @MainActor
 public final class ComposerAttachmentState {
     public var selectedPhoto: PhotosPickerItem?
     public private(set) var attachment: ComposerAttachmentSummary?
     public var errorMessage: String?
+    public let policy: ComposerAttachmentPolicy
 
-    public init() {}
+    /// Shown in `errorMessage` when a picked photo cannot be loaded or encoded.
+    public static let loadFailedMessage = "Couldn't prepare that photo for sending."
+
+    public init(policy: ComposerAttachmentPolicy = .default) {
+        self.policy = policy
+    }
 
     /// The prepared JPEG bytes of the attached photo, if any.
     public var imageData: Data? { attachment?.imageData }
@@ -28,13 +35,19 @@ public final class ComposerAttachmentState {
             return
         }
         do {
-            attachment = try await selectedPhoto.loadTransferable(
-                type: ComposerAttachmentSummary.self
-            )
-            errorMessage = attachment == nil ? VisionImagePreparer.prepareFailedMessage : nil
+            let picked = try await selectedPhoto.loadTransferable(type: PickedImage.self)
+            let policy = self.policy
+            let encoded = await Task.detached { picked.flatMap { policy.encode($0.data) } }.value
+            if let picked, let encoded {
+                attachment = ComposerAttachmentSummary(filename: picked.filename + ".jpg", imageData: encoded)
+                errorMessage = nil
+            } else {
+                attachment = nil
+                errorMessage = Self.loadFailedMessage
+            }
         } catch {
             attachment = nil
-            errorMessage = VisionImagePreparer.prepareFailedMessage
+            errorMessage = Self.loadFailedMessage
         }
     }
 
