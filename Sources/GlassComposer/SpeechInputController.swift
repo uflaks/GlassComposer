@@ -10,10 +10,9 @@ import Speech
 /// On-device composer dictation via the iOS 26 / macOS 26 `SpeechAnalyzer`.
 ///
 /// Hosts need `NSMicrophoneUsageDescription` and
-/// `NSSpeechRecognitionUsageDescription` in their Info.plist. The previous
-/// `SFSpeechRecognizer` + `AVAudioEngine` path installed the mic tap before
-/// activating the audio session (invalid 0 Hz format) and silently no-op'd
-/// when `SFSpeechRecognizer()` was nil for the device locale.
+/// `NSSpeechRecognitionUsageDescription` in their Info.plist. Dictation stops
+/// by itself when the system interrupts audio (a call, Siri) or the audio
+/// route changes under the engine, so `isRecording` never lies.
 @available(iOS 26.0, macOS 26.0, *)
 @MainActor
 @Observable
@@ -37,8 +36,17 @@ public final class SpeechInputController {
     private var finalizedText = ""
     private var volatileText = ""
     private var onTranscript: ((String) -> Void)?
+    private let audioSessionPolicy: SpeechAudioSessionPolicy
+    private var systemObservers: [any NSObjectProtocol] = []
+    #if os(iOS)
+    private var restoredSessionConfiguration: AudioSessionConfiguration?
+    #endif
 
-    public init() {}
+    /// - Parameter audioSessionPolicy: Whether this controller or the host
+    ///   configures `AVAudioSession` on iOS. Defaults to `.managed`.
+    public init(audioSessionPolicy: SpeechAudioSessionPolicy = .managed) {
+        self.audioSessionPolicy = audioSessionPolicy
+    }
 
     /// Starts dictation, or stops it if already recording. While recording,
     /// `onTranscript` receives `existingText` plus everything spoken so far.
@@ -152,6 +160,36 @@ public final class SpeechInputController {
         try installMicrophoneTap(targetFormat: analyzerFormat, builder: builder)
         audioEngine.prepare()
         try audioEngine.start()
+        observeSystemAudioChanges()
+    }
+
+    /// Stops dictation when the system takes the audio away: an interruption
+    /// (iOS) or a configuration change such as the input route disappearing
+    /// (both platforms). The engine is already stopped by then; this resets
+    /// state so the UI follows.
+    private func observeSystemAudioChanges() {
+        let center = NotificationCenter.default
+        systemObservers.append(center.addObserver(
+            forName: .AVAudioEngineConfigurationChange, object: audioEngine, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in await self?.stopRecording() }
+        })
+        #if os(iOS)
+        systemObservers.append(center.addObserver(
+            forName: AVAudioSession.interruptionNotification, object: AVAudioSession.sharedInstance(), queue: .main
+        ) { [weak self] notification in
+            guard let raw = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+                  AVAudioSession.InterruptionType(rawValue: raw) == .began else { return }
+            Task { @MainActor in await self?.stopRecording() }
+        })
+        #endif
+    }
+
+    private func stopObservingSystemAudioChanges() {
+        for observer in systemObservers {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        systemObservers.removeAll()
     }
 
     private func listenForResults<Results>(
@@ -206,18 +244,29 @@ public final class SpeechInputController {
     }
 
     /// iOS routes the mic through `AVAudioSession`; macOS has no session, the
-    /// engine's input node is enough.
+    /// engine's input node is enough. Under `.hostManaged` the host has
+    /// already set up a session that can record.
     private func activateAudioSession() throws {
         #if os(iOS)
+        guard audioSessionPolicy.managesSession else { return }
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.record, mode: .measurement, options: .duckOthers)
+        restoredSessionConfiguration = AudioSessionConfiguration(
+            category: session.category, mode: session.mode, options: session.categoryOptions
+        )
+        try session.setCategory(audioSessionPolicy.category, mode: audioSessionPolicy.mode, options: audioSessionPolicy.options)
         try session.setActive(true, options: .notifyOthersOnDeactivation)
         #endif
     }
 
     private func deactivateAudioSession() {
         #if os(iOS)
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+        guard audioSessionPolicy.managesSession else { return }
+        let session = AVAudioSession.sharedInstance()
+        try? session.setActive(false, options: .notifyOthersOnDeactivation)
+        if let previous = restoredSessionConfiguration {
+            try? session.setCategory(previous.category, mode: previous.mode, options: previous.options)
+            restoredSessionConfiguration = nil
+        }
         #endif
     }
 
@@ -241,6 +290,7 @@ public final class SpeechInputController {
 
     private func stopRecording() async {
         startGeneration += 1
+        stopObservingSystemAudioChanges()
 
         if audioEngine.isRunning {
             audioEngine.stop()
@@ -297,6 +347,15 @@ extension SpeechTranscriber.Result: LiveSpeechResult {}
 
 @available(iOS 26.0, macOS 26.0, *)
 extension DictationTranscriber.Result: LiveSpeechResult {}
+
+#if os(iOS)
+/// What the host had on `AVAudioSession` before dictation, put back after.
+private struct AudioSessionConfiguration {
+    let category: AVAudioSession.Category
+    let mode: AVAudioSession.Mode
+    let options: AVAudioSession.CategoryOptions
+}
+#endif
 
 /// Why dictation could not start or stopped on its own.
 public enum SpeechInputFailure: Error, LocalizedError, Equatable, Sendable {

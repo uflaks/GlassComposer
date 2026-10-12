@@ -24,7 +24,7 @@ macOS 14 so it can sit next to older code; every type is
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/uflaks/GlassComposer", from: "0.5.0")
+    .package(url: "https://github.com/uflaks/GlassComposer", from: "0.6.0")
 ],
 targets: [
     .target(name: "YourApp", dependencies: [
@@ -46,6 +46,13 @@ Dictation asks for the microphone and speech recognition, so the host app's
 A sandboxed macOS app also needs the Audio Input entitlement
 (`com.apple.security.device.audio-input`). Photo attachments use
 `PhotosPicker`, which needs no usage description.
+
+On iOS the controller configures `AVAudioSession` for recording while
+dictating and restores what it found afterwards. If your app plays audio
+too, pass a policy: `SpeechInputController(audioSessionPolicy: .managed(category: .playAndRecord))`
+keeps playback alive, and `.hostManaged` leaves the session entirely to you.
+Dictation stops on its own when a call or Siri interrupts audio, or when the
+input route changes.
 
 ## Usage
 
@@ -93,7 +100,8 @@ See the doc comments on `ComposerView.init` for every parameter.
   budget; the defaults suit chat backends with small request limits, pass your
   own to keep full-resolution images). The ImageIO encoder behind it has no
   UIKit dependency.
-- `SpeechInputController`, `SpeechTranscriptAssembler` — on-device dictation.
+- `SpeechInputController`, `SpeechTranscriptAssembler` — on-device dictation;
+  `SpeechAudioSessionPolicy` says who owns `AVAudioSession` on iOS.
   `failure` is a `SpeechInputFailure` (`.microphoneDenied`, `.speechDenied`,
   `.localeNotSupported`, `.assetUnavailable`, `.audioSetupFailed`) and
   `errorMessage` is its text; attachments report a `ComposerAttachmentFailure`

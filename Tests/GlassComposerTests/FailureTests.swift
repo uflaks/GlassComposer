@@ -29,3 +29,13 @@ struct FailureTests {
         #expect(state.failure == nil)
     }
 }
+
+@Suite("Audio session policy")
+struct SpeechAudioSessionPolicyTests {
+    @Test("Presets differ in whether the controller owns the session")
+    func presets() {
+        #expect(SpeechAudioSessionPolicy.managed.managesSession)
+        #expect(!SpeechAudioSessionPolicy.hostManaged.managesSession)
+        #expect(SpeechAudioSessionPolicy.managed != .hostManaged)
+    }
+}
