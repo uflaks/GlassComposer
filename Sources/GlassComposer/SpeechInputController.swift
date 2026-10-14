@@ -350,7 +350,7 @@ public final class SpeechInputController {
         }
 
         let converter = SpeechAudioBufferConverter()
-        input.installTap(onBus: 0, bufferSize: 4096, format: micFormat) { buffer, _ in
+        input.installTap(onBus: 0, bufferSize: 4096, format: micFormat) { @Sendable buffer, _ in
             guard let converted = try? converter.convert(buffer, to: targetFormat) else { return }
             builder.yield(AnalyzerInput(buffer: converted))
         }
@@ -394,7 +394,7 @@ public final class SpeechInputController {
 
     private func requestSpeechAuthorization() async -> Bool {
         let status = await withCheckedContinuation { continuation in
-            SFSpeechRecognizer.requestAuthorization { status in
+            SFSpeechRecognizer.requestAuthorization { @Sendable status in
                 continuation.resume(returning: status)
             }
         }
