@@ -483,7 +483,8 @@ private final class SpeechAudioBufferConverter: @unchecked Sendable {
         }
 
         var nsError: NSError?
-        var fed = false
+        // The input block is @Sendable, but AVAudioConverter calls it synchronously here.
+        nonisolated(unsafe) var fed = false
         let status = converter.convert(to: output, error: &nsError) { _, statusPtr in
             defer { fed = true }
             statusPtr.pointee = fed ? .noDataNow : .haveData
