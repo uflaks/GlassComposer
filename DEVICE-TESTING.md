@@ -102,8 +102,10 @@ what happened next to it.
   turn runs with `onStop` set: "Stop".
 - [ ] **Plus menu.** Open with `+`, tap outside to dismiss, open again and
   pick Photos. Expect: the icon rotates to an ×, the dim backdrop catches
-  the outside tap, picking a photo closes the menu, and focusing the text
-  field closes it too.
+  the outside tap, tapping Photos opens the photo picker, picking a photo
+  closes the menu, and focusing the text field closes it too. Repeat with
+  the composer mounted over a scrolled chat and a `menuExtras` row: each
+  row takes its tap, none reaches the content beneath.
 - [ ] **Touches over the list.** With the composer mounted over a scrolled
   chat, tap the padding between `+` and the field, and the gap next to the
   send button. Expect: nothing underneath receives the tap.
