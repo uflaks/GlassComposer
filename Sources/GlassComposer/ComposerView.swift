@@ -156,8 +156,16 @@ public struct ComposerView<MenuExtras: View, Accessory: View>: View {
         // Hosts mount the composer over their scrolling content (`safeAreaInset`
         // over a List), so make the whole padded bounds hit-testable. Otherwise
         // touches in the padding and the gaps between controls fall through to
-        // the rows scrolled beneath the glass.
-        .contentShape(Rectangle())
+        // the rows scrolled beneath the glass. A clear shape behind the controls,
+        // not `contentShape` on the composer: that would also confine hit testing
+        // of everything inside to these bounds, and the `+` menu's panel opens
+        // above them, so its rows could not be tapped.
+        .background {
+            Rectangle()
+                .fill(.clear)
+                .contentShape(Rectangle())
+                .accessibilityHidden(true)
+        }
         .background {
             if isPlusMenuExpanded {
                 Color.black.opacity(0.18)
